@@ -1,0 +1,19 @@
+Email: superadmin@example.com
+Password: admin123
+You can use these credentials to log in and access the Admin Panel (Dashboard).
+
+---
+New Admin Added:
+Email: sam@shaikhameermaviyagmail.com
+Password: Wellcom33
+Username: sam_admin
+Role: admin
+
+---
+How to Run Manually
+If you ever need to restart the project, use the following command in your terminal:
+
+powershell
+npm.cmd run dev
+
+---
