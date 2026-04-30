@@ -9,7 +9,6 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TrendingUp, Clock, Star, ChevronRight, Users, MessageCircle } from "lucide-react"
-import { AppShell } from "@/components/app-shell"
 
 interface Video {
   _id?: string
@@ -76,7 +75,6 @@ export default function HomePage() {
   }, [])
 
   return (
-    <AppShell>
     <div className="max-w-screen-xl mx-auto px-2 sm:px-4 md:px-6 py-6">
       {/* Hero Section */}
       <section className="mb-8 rounded-xl bg-gradient-to-r from-primary/20 via-primary/10 to-transparent p-6 lg:p-8">
@@ -200,7 +198,6 @@ export default function HomePage() {
         </div>
       )}
     </div>
-    </AppShell>
   )
 }
 
