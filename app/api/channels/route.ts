@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import connectDB from "@/lib/db"
 import Channel from "@/lib/models/Channel"
 
-export const revalidate = 600
+export const dynamic = "force-dynamic"
 
 export async function GET(req: NextRequest) {
   try {
