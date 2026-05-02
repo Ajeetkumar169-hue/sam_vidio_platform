@@ -105,6 +105,15 @@ export async function POST(req: NextRequest) {
         file = formData.get("file") as File | null
         const linkUrl = formData.get("videoUrl") as string
         if (linkUrl && (!file || file.size === 0)) url = linkUrl
+        
+        // Handle direct file upload to Cloudinary if MOCK_MODE is false
+        if (file && file.size > 0) {
+           console.log(`☁️ Uploading file to Cloudinary: ${file.name} (${file.size} bytes)`);
+           const buffer = Buffer.from(await file.arrayBuffer());
+           const uploadResult = await uploadVideo(buffer);
+           url = uploadResult.secure_url;
+           console.log("✅ Cloudinary upload successful:", url);
+        }
       } else {
         const body = await req.json()
         title = body.title
