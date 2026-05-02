@@ -13,12 +13,9 @@ import { Palette, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const themes = [
-  { id: "dark", name: "Default Dark", color: "#1a1a2e" },
-  { id: "theme-obsidian", name: "Obsidian", color: "#000000" },
-  { id: "theme-premium-dark", name: "Premium Dark", color: "#262626" },
-  { id: "theme-pearl-clean", name: "Pearl Clean", color: "#ffffff" },
-  { id: "theme-luxury-satin", name: "Luxury Satin", color: "#1e1b4b" },
-  { id: "theme-chic-rose", name: "Chic Rose", color: "#450a0a" },
+  { id: "dark", name: "Default Black", color: "#000000" },
+  { id: "white", name: "Pearl White", color: "#ffffff" },
+  { id: "pink", name: "Luxury Pink", color: "#ffc0cb" },
 ]
 
 export function ThemeSwitcher() {

@@ -276,17 +276,11 @@ export default function UploadPage() {
 
                             const getWidgetStyles = (currentTheme: string) => {
                               switch (currentTheme) {
-                                case "theme-obsidian":
-                                  return { window: "#000000", windowBorder: "#1e293b", tabIcon: "#ef4444", menuIcons: "#94a3b8", textDark: "#000000", textLight: "#ffffff", link: "#ef4444", action: "#ef4444", inactiveTabIcon: "#475569", error: "#dc2626", inProgress: "#ef4444", complete: "#22c55e", sourceBg: "#0f172a" };
-                                case "theme-premium-dark":
-                                  return { window: "#151515", windowBorder: "#252525", tabIcon: "#fbbf24", menuIcons: "#d1d5db", textDark: "#000000", textLight: "#ffffff", link: "#fbbf24", action: "#fbbf24", inactiveTabIcon: "#6b7280", error: "#ef4444", inProgress: "#fbbf24", complete: "#10b981", sourceBg: "#171717" };
-                                case "theme-pearl-clean":
+                                case "white":
                                   return { window: "#ffffff", windowBorder: "#e5e7eb", tabIcon: "#1e1b4b", menuIcons: "#4b5563", textDark: "#000000", textLight: "#ffffff", link: "#1e1b4b", action: "#1e1b4b", inactiveTabIcon: "#9ca3af", error: "#dc2626", inProgress: "#1e1b4b", complete: "#059669", sourceBg: "#f9fafb" };
-                                case "theme-luxury-satin":
-                                  return { window: "#121b28", windowBorder: "#1e293b", tabIcon: "#ffffff", menuIcons: "#94a3b8", textDark: "#000000", textLight: "#ffffff", link: "#ffffff", action: "#ffffff", inactiveTabIcon: "#475569", error: "#f87171", inProgress: "#ffffff", complete: "#34d399", sourceBg: "#0f172a" };
-                                case "theme-chic-rose":
-                                  return { window: "#150505", windowBorder: "#2a0a0a", tabIcon: "#ef4444", menuIcons: "#f87171", textDark: "#000000", textLight: "#ffffff", link: "#ef4444", action: "#ef4444", inactiveTabIcon: "#991b1b", error: "#ef4444", inProgress: "#ef4444", complete: "#10b981", sourceBg: "#180505" };
-                                default:
+                                case "pink":
+                                  return { window: "#fff1f2", windowBorder: "#fecaca", tabIcon: "#e11d48", menuIcons: "#fb7185", textDark: "#000000", textLight: "#ffffff", link: "#e11d48", action: "#e11d48", inactiveTabIcon: "#fda4af", error: "#dc2626", inProgress: "#e11d48", complete: "#22c55e", sourceBg: "#fff1f2" };
+                                default: // dark
                                   return { window: "#000000", windowBorder: "#1e293b", tabIcon: "#ef4444", menuIcons: "#94a3b8", textDark: "#000000", textLight: "#ffffff", link: "#ef4444", action: "#ef4444", inactiveTabIcon: "#475569", error: "#dc2626", inProgress: "#ef4444", complete: "#22c55e", sourceBg: "#0f172a" };
                               }
                             }
