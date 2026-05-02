@@ -29,7 +29,7 @@ export async function GET() {
         ])
 
         const recentUploadsCount = uploadsByDay.reduce((acc, curr) => acc + curr.count, 0)
-        
+
         const videoStats = await Video.aggregate([
             {
                 $group: {
@@ -67,7 +67,7 @@ export async function GET() {
             { label: "Likes per View", value: stats.totalViews ? Math.min((stats.totalLikes / stats.totalViews) * 100, 100) : 0 },
         ]
 
-        return NextResponse.json({ 
+        return NextResponse.json({
             uploadsByDay,
             growth,
             engagement
