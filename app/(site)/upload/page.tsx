@@ -140,11 +140,15 @@ export default function UploadPage() {
 
     try {
         // 1. Get Config
+        console.log("📡 Fetching config...");
         const configRes = await fetch("/api/config")
-        const { cloudinaryCloudName, uploadPreset, isMock } = await configRes.json()
+        const config = await configRes.json()
+        console.log("⚙️ Config received:", config);
+
+        const { cloudinaryCloudName, uploadPreset, isMock } = config;
 
         if (isMock) {
-            // Fallback to S3 Manager if specifically in Mock mode locally
+            console.log("📁 MOCK_MODE is ON. Using S3 Manager fallback.");
             const result = await uploadManager!.start({ title, description, categoryId, tags, visibility })
             setUploadedVideo(result.video)
             setIsComplete(true)
@@ -153,8 +157,10 @@ export default function UploadPage() {
         }
 
         if (!cloudinaryCloudName) {
-            throw new Error("Cloudinary not configured on Vercel")
+            throw new Error("Cloudinary Cloud Name missing in config");
         }
+
+        console.log(`☁️ Starting direct upload to Cloudinary: ${cloudinaryCloudName}`);
 
         // 2. Upload to Cloudinary via XHR (for progress)
         const formData = new FormData()
@@ -169,25 +175,33 @@ export default function UploadPage() {
             if (event.lengthComputable) {
                 const percent = Math.round((event.loaded / event.total) * 100)
                 setProgress(percent)
+                console.log(`📊 Upload Progress: ${percent}%`);
             }
         }
 
         const uploadPromise = new Promise((resolve, reject) => {
             xhr.onload = () => {
+                console.log("📩 XHR Response Status:", xhr.status);
                 if (xhr.status >= 200 && xhr.status < 300) {
                     resolve(JSON.parse(xhr.responseText))
                 } else {
-                    reject(new Error("Cloudinary upload failed"))
+                    console.error("❌ Cloudinary Error Response:", xhr.responseText);
+                    reject(new Error(`Cloudinary upload failed: ${xhr.status} ${xhr.statusText}`));
                 }
             }
-            xhr.onerror = () => reject(new Error("Network error during upload"))
+            xhr.onerror = (e) => {
+                console.error("❌ XHR Network Error:", e);
+                reject(new Error("Network error during upload"));
+            }
             xhr.send(formData)
         })
 
         const cloudinaryData: any = await uploadPromise
+        console.log("✅ Cloudinary Upload Data:", cloudinaryData);
         const finalUrl = cloudinaryData.secure_url
 
         // 3. Save to our database
+        console.log("💾 Saving to database...");
         const saveRes = await fetch("/api/videos", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
