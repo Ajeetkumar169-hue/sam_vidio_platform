@@ -285,18 +285,18 @@ export default function UploadPage() {
                                 styles: {
                                     palette: {
                                         window: "#000000",
-                                        windowBorder: "#90a0b3",
-                                        tabIcon: "#0078ff",
-                                        menuIcons: "#5a616a",
+                                        windowBorder: "#1e293b",
+                                        tabIcon: "#ef4444",
+                                        menuIcons: "#94a3b8",
                                         textDark: "#000000",
                                         textLight: "#ffffff",
-                                        link: "#0078ff",
-                                        action: "#ff620c",
-                                        inactiveTabIcon: "#0e2f5a",
-                                        error: "#f44235",
-                                        inProgress: "#0078ff",
-                                        complete: "#20b832",
-                                        sourceBg: "#1a1a2e"
+                                        link: "#ef4444",
+                                        action: "#ef4444",
+                                        inactiveTabIcon: "#475569",
+                                        error: "#dc2626",
+                                        inProgress: "#ef4444",
+                                        complete: "#22c55e",
+                                        sourceBg: "#0f172a"
                                     }
                                 }
                               },
