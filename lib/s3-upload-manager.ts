@@ -16,7 +16,7 @@ export interface UploadProgress {
 }
 
 const MIN_CHUNK_SIZE = 5 * 1024 * 1024; // 5MB minimum for S3 multipart
-const MAX_CONCURRENT = 3; // Number of concurrent chunk uploads
+const MAX_CONCURRENT = 6; // Increased from 3 for faster speed
 
 export class S3UploadManager {
     private file: File;

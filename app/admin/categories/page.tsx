@@ -172,6 +172,10 @@ export default function AdminCategories() {
     }
 
     const handleDelete = async (id: string, name: string) => {
+        if (!id) {
+            toast.error("Invalid Category ID")
+            return
+        }
         if (!confirm(`Are you sure you want to delete the category "${name}"? This will clear the category from all associated videos.`)) return
         
         try {

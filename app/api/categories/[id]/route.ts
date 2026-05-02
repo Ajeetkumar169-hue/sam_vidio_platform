@@ -14,23 +14,27 @@ export async function DELETE(
     const user = await getCurrentUser()
 
     if (!user || user.role !== "admin") {
+      console.warn(`🛑 Unauthorized deletion attempt by user: ${user?.email || "Unknown"}`);
       return NextResponse.json({ error: "Admin only" }, { status: 403 })
     }
 
     // 1. Check if category exists
     const category = await Category.findById(id)
     if (!category) {
+      console.warn(`🔍 Category not found for deletion: ${id}`);
       return NextResponse.json({ error: "Category not found" }, { status: 404 })
     }
 
     // 2. Clear category field from all videos that use it
-    await Video.updateMany(
+    const updateResult = await Video.updateMany(
       { category: id },
       { $set: { category: null } }
     )
+    console.log(`🧹 Cleared category from ${updateResult.modifiedCount} videos`);
 
     // 3. Delete the category
     await Category.findByIdAndDelete(id)
+    console.log(`✅ Category deleted successfully: ${category.name} (${id})`);
 
     return NextResponse.json({ success: true, message: "Category deleted and video references cleared" })
   } catch (error: any) {

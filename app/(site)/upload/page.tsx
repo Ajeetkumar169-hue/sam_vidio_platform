@@ -195,7 +195,7 @@ export default function UploadPage() {
             {isComplete ? "Upload Complete!" : "Upload Video"}
           </h1>
           <p className="text-muted-foreground">
-            {isComplete ? "Your video is now live" : "Share your content with the world"}
+            {isComplete ? "Your video is now live" : "Share your content. Only Title and Category are required."}
           </p>
         </div>
 
