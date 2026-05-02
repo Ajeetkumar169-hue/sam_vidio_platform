@@ -39,6 +39,7 @@ export default function RootLayout({
           defaultTheme="dark"
           enableSystem={false}
           disableTransitionOnChange
+          themes={["dark", "light", "theme-obsidian", "theme-premium-dark", "theme-pearl-clean", "theme-luxury-satin", "theme-chic-rose"]}
         >
           <AuthProvider>
             <div className="relative flex min-h-screen flex-col overflow-x-hidden">
