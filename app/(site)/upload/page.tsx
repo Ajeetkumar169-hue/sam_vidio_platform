@@ -133,94 +133,41 @@ export default function UploadPage() {
         return
     }
 
-    // Cloudinary Upload Widget (Final Solution for CORS & Large Files)
+    // Save to Database (Video is already uploaded via Widget)
     setLoading(true)
-    
     try {
-        const configRes = await fetch("/api/config")
-        const { cloudinaryCloudName, uploadPreset } = await configRes.json()
-
-        if (!(window as any).cloudinary) {
-            toast.error("Cloudinary script not loaded. Please refresh the page.")
+        if (!uploadedVideo?.videoUrl) {
+            toast.error("Please upload a video first by clicking the upload box.")
             setLoading(false)
             return
         }
 
-        const myWidget = (window as any).cloudinary.createUploadWidget(
-            {
-                cloudName: cloudinaryCloudName,
-                uploadPreset: uploadPreset || "ml_default",
-                sources: ["local", "url", "camera"],
-                multiple: false,
-                resourceType: "video",
-                folder: "videos",
-                clientAllowedFormats: ["mp4", "webm", "ogg"],
-                maxFileSize: 1000000000, // 1GB limit (can be increased)
-                styles: {
-                    palette: {
-                        window: "#000000",
-                        windowBorder: "#90a0b3",
-                        tabIcon: "#0078ff",
-                        menuIcons: "#5a616a",
-                        textDark: "#000000",
-                        textLight: "#ffffff",
-                        link: "#0078ff",
-                        action: "#ff620c",
-                        inactiveTabIcon: "#0e2f5a",
-                        error: "#f44235",
-                        inProgress: "#0078ff",
-                        complete: "#20b832",
-                        sourceBg: "#1a1a2e"
-                    },
-                    fonts: {
-                        default: null,
-                        "'Fira Sans', sans-serif": "https://fonts.googleapis.com/css?family=Fira+Sans"
-                    }
-                }
-            },
-            async (error: any, result: any) => {
-                if (!error && result && result.event === "success") {
-                    console.log("✅ Widget Upload Success:", result.info)
-                    const finalUrl = result.info.secure_url
+        const saveRes = await fetch("/api/videos", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                title,
+                description,
+                videoUrl: uploadedVideo.videoUrl,
+                categoryId,
+                tags,
+                visibility,
+                fileSize: uploadedVideo.bytes,
+                filePublicId: uploadedVideo.publicId
+            })
+        })
 
-                    // Save to our database
-                    const saveRes = await fetch("/api/videos", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            title,
-                            description,
-                            videoUrl: finalUrl,
-                            categoryId,
-                            tags,
-                            visibility,
-                            fileSize: result.info.bytes,
-                            filePublicId: result.info.public_id
-                        })
-                    })
-
-                    const saveData = await saveRes.json()
-                    if (saveData.success) {
-                        setUploadedVideo(saveData.video)
-                        setIsComplete(true)
-                        toast.success("Upload successful!")
-                    } else {
-                        toast.error(saveData.error || "Failed to save to database")
-                    }
-                    setLoading(false)
-                } else if (error) {
-                    toast.error("Upload failed: " + error.message)
-                    setLoading(false)
-                } else if (result.event === "close") {
-                    setLoading(false)
-                }
-            }
-        )
-
-        myWidget.open()
-        
+        const saveData = await saveRes.json()
+        if (saveData.success) {
+            setUploadedVideo({ ...uploadedVideo, ...saveData.video })
+            setIsComplete(true)
+            toast.success("Video published successfully!")
+        } else {
+            toast.error(saveData.error || "Failed to save video details")
+        }
     } catch (err: any) {
-        toast.error(err.message || "Something went wrong")
+        toast.error("Database error: " + err.message)
+    } finally {
         setLoading(false)
     }
   }
@@ -315,16 +262,62 @@ export default function UploadPage() {
                   <TabsContent value="device" className="mt-0 space-y-4">
                     {!selectedFile ? (
                       <div
-                        onClick={() => fileInputRef.current?.click()}
-                        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          const file = e.dataTransfer.files?.[0];
-                          if (file && file.type.startsWith("video/")) {
-                            setSelectedFile(file);
-                            setTitle(file.name.split(".")[0]);
-                            setPreviewUrl(URL.createObjectURL(file));
+                        onClick={async () => {
+                          try {
+                            const configRes = await fetch("/api/config")
+                            const { cloudinaryCloudName, uploadPreset } = await configRes.json()
+
+                            if (!(window as any).cloudinary) {
+                              toast.error("Cloudinary script loading... please wait 2 seconds.")
+                              return
+                            }
+
+                            const myWidget = (window as any).cloudinary.createUploadWidget(
+                              {
+                                cloudName: cloudinaryCloudName,
+                                uploadPreset: uploadPreset || "ml_default",
+                                sources: ["local", "url", "camera"],
+                                multiple: false,
+                                resourceType: "video",
+                                folder: "videos",
+                                clientAllowedFormats: ["mp4", "webm", "ogg"],
+                                maxFileSize: 1000000000, 
+                                styles: {
+                                    palette: {
+                                        window: "#000000",
+                                        windowBorder: "#90a0b3",
+                                        tabIcon: "#0078ff",
+                                        menuIcons: "#5a616a",
+                                        textDark: "#000000",
+                                        textLight: "#ffffff",
+                                        link: "#0078ff",
+                                        action: "#ff620c",
+                                        inactiveTabIcon: "#0e2f5a",
+                                        error: "#f44235",
+                                        inProgress: "#0078ff",
+                                        complete: "#20b832",
+                                        sourceBg: "#1a1a2e"
+                                    }
+                                }
+                              },
+                              (error: any, result: any) => {
+                                if (!error && result && result.event === "success") {
+                                  console.log("✅ Widget Upload Success:", result.info)
+                                  setPreviewUrl(result.info.secure_url)
+                                  setSelectedFile({ name: result.info.original_filename, size: result.info.bytes } as any)
+                                  setUploadedVideo({ 
+                                    videoUrl: result.info.secure_url,
+                                    publicId: result.info.public_id,
+                                    bytes: result.info.bytes
+                                  })
+                                  if (!title) setTitle(result.info.original_filename)
+                                  toast.success("Video uploaded to cloud!")
+                                }
+                              }
+                            )
+                            myWidget.open()
+                          } catch (err) {
+                            toast.error("Failed to open uploader")
                           }
                         }}
                         className="group relative flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/25 rounded-2xl h-[300px] md:h-[400px] bg-secondary/20 hover:bg-secondary/40 hover:border-primary/50 cursor-pointer transition-all duration-300 overflow-hidden"
