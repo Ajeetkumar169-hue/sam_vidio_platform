@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import connectDB from "@/lib/db"
 import Channel from "@/lib/models/Channel"
+import User from "@/lib/models/User" // Ensure User model is registered
 
 export const dynamic = "force-dynamic"
 
