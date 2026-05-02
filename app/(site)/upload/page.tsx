@@ -387,6 +387,7 @@ export default function UploadPage() {
                           <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                           <Input
                             id="videoUrl"
+                            name="videoUrl"
                             placeholder="https://example.com/video.mp4"
                             value={videoUrl}
                             onChange={(e) => setVideoUrl(e.target.value)}
@@ -421,6 +422,7 @@ export default function UploadPage() {
                       <Label htmlFor="title" className="text-base">Title *</Label>
                       <Input
                         id="title"
+                        name="title"
                         placeholder="Give your video a catchy title"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
@@ -434,6 +436,7 @@ export default function UploadPage() {
                       <Label htmlFor="description" className="text-base">Description</Label>
                       <Textarea
                         id="description"
+                        name="description"
                         placeholder="Tell viewers about your video..."
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
@@ -447,7 +450,7 @@ export default function UploadPage() {
                       <div className="flex flex-col gap-2">
                         <Label className="text-base">Category *</Label>
                         <Select value={categoryId} onValueChange={setCategoryId}>
-                          <SelectTrigger className="h-12 bg-secondary/50 border-none focus-visible:ring-1 focus-visible:ring-primary rounded-xl">
+                          <SelectTrigger id="categoryId" name="categoryId" className="h-12 bg-secondary/50 border-none focus-visible:ring-1 focus-visible:ring-primary rounded-xl">
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
                           <SelectContent className="rounded-xl">
@@ -463,7 +466,7 @@ export default function UploadPage() {
                       <div className="flex flex-col gap-2">
                         <Label className="text-base">Visibility</Label>
                         <Select value={visibility} onValueChange={setVisibility}>
-                          <SelectTrigger className="h-12 bg-secondary/50 border-none focus-visible:ring-1 focus-visible:ring-primary rounded-xl">
+                          <SelectTrigger id="visibility" name="visibility" className="h-12 bg-secondary/50 border-none focus-visible:ring-1 focus-visible:ring-primary rounded-xl">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent className="rounded-xl">
@@ -479,6 +482,7 @@ export default function UploadPage() {
                       <Label htmlFor="tags" className="text-base">Tags</Label>
                       <Input
                         id="tags"
+                        name="tags"
                         placeholder="trending, funny, music"
                         value={tags}
                         onChange={(e) => setTags(e.target.value)}
