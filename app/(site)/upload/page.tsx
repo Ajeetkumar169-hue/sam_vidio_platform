@@ -138,70 +138,61 @@ export default function UploadPage() {
     setStatus("uploading")
     setProgress(0)
 
+    // Signed Cloudinary Upload (More reliable)
+    setLoading(true)
+    setStatus("uploading")
+    setProgress(0)
+
     try {
-        // 1. Get Config
-        console.log("📡 Fetching config...");
-        const configRes = await fetch("/api/config")
-        const config = await configRes.json()
-        console.log("⚙️ Config received:", config);
+        // 1. Get Signature from our backend
+        console.log("📡 Getting upload signature...");
+        const signRes = await fetch("/api/upload/sign", { method: "POST" })
+        const signData = await signRes.json()
 
-        const { cloudinaryCloudName, uploadPreset, isMock } = config;
+        if (signData.error) throw new Error(signData.error)
 
-        if (isMock) {
-            console.log("📁 MOCK_MODE is ON. Using S3 Manager fallback.");
-            const result = await uploadManager!.start({ title, description, categoryId, tags, visibility })
-            setUploadedVideo(result.video)
-            setIsComplete(true)
-            toast.success("Upload successful!")
-            return
-        }
-
-        if (!cloudinaryCloudName) {
-            throw new Error("Cloudinary Cloud Name missing in config");
-        }
-
-        console.log(`☁️ Starting direct upload to Cloudinary: ${cloudinaryCloudName}`);
+        const { signature, timestamp, cloudName, apiKey } = signData
 
         // 2. Upload to Cloudinary via XHR (for progress)
         const formData = new FormData()
         formData.append("file", selectedFile!)
-        formData.append("upload_preset", uploadPreset)
+        formData.append("api_key", apiKey)
+        formData.append("timestamp", timestamp.toString())
+        formData.append("signature", signature)
         formData.append("folder", "videos")
 
+        console.log("☁️ Starting signed upload to Cloudinary...");
+
         const xhr = new XMLHttpRequest()
-        xhr.open("POST", `https://api.cloudinary.com/v1_1/${cloudinaryCloudName}/video/upload`)
+        xhr.open("POST", `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`)
 
         xhr.upload.onprogress = (event) => {
             if (event.lengthComputable) {
                 const percent = Math.round((event.loaded / event.total) * 100)
                 setProgress(percent)
-                console.log(`📊 Upload Progress: ${percent}%`);
+                console.log(`📊 Progress: ${percent}%`)
             }
         }
 
         const uploadPromise = new Promise((resolve, reject) => {
             xhr.onload = () => {
-                console.log("📩 XHR Response Status:", xhr.status);
                 if (xhr.status >= 200 && xhr.status < 300) {
                     resolve(JSON.parse(xhr.responseText))
                 } else {
-                    console.error("❌ Cloudinary Error Response:", xhr.responseText);
-                    reject(new Error(`Cloudinary upload failed: ${xhr.status} ${xhr.statusText}`));
+                    console.error("❌ Cloudinary Error:", xhr.responseText)
+                    reject(new Error("Cloudinary upload failed"))
                 }
             }
-            xhr.onerror = (e) => {
-                console.error("❌ XHR Network Error:", e);
-                reject(new Error("Network error during upload"));
-            }
+            xhr.onerror = () => reject(new Error("Network error during upload"))
             xhr.send(formData)
         })
 
         const cloudinaryData: any = await uploadPromise
-        console.log("✅ Cloudinary Upload Data:", cloudinaryData);
+        console.log("✅ Cloudinary Success:", cloudinaryData)
         const finalUrl = cloudinaryData.secure_url
 
         // 3. Save to our database
-        console.log("💾 Saving to database...");
+        console.log("💾 Saving video metadata to DB...");
         const saveRes = await fetch("/api/videos", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
