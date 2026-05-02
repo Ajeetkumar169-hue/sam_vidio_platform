@@ -161,33 +161,20 @@ export default function UploadPage() {
         formData.append("signature", signature)
         // Note: No folder here to match the simplified signature
 
-        console.log("☁️ Starting signed upload to Cloudinary...");
+        console.log("☁️ Starting signed upload to Cloudinary via fetch...");
 
-        const xhr = new XMLHttpRequest()
-        xhr.open("POST", `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`)
+        const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, {
+            method: "POST",
+            body: formData
+        });
 
-        xhr.upload.onprogress = (event) => {
-            if (event.lengthComputable) {
-                const percent = Math.round((event.loaded / event.total) * 100)
-                setProgress(percent)
-                console.log(`📊 Progress: ${percent}%`)
-            }
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error("❌ Cloudinary Error:", errorData);
+            throw new Error(errorData.error?.message || "Cloudinary upload failed");
         }
 
-        const uploadPromise = new Promise((resolve, reject) => {
-            xhr.onload = () => {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    resolve(JSON.parse(xhr.responseText))
-                } else {
-                    console.error("❌ Cloudinary Error:", xhr.responseText)
-                    reject(new Error("Cloudinary upload failed"))
-                }
-            }
-            xhr.onerror = () => reject(new Error("Network error during upload"))
-            xhr.send(formData)
-        })
-
-        const cloudinaryData: any = await uploadPromise
+        const cloudinaryData = await response.json();
         console.log("✅ Cloudinary Success:", cloudinaryData)
         const finalUrl = cloudinaryData.secure_url
 
