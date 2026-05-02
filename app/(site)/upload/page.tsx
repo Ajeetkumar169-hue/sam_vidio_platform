@@ -133,81 +133,94 @@ export default function UploadPage() {
         return
     }
 
-    // Direct Cloudinary Upload
+    // Cloudinary Upload Widget (Final Solution for CORS & Large Files)
     setLoading(true)
-    setStatus("uploading")
-    setProgress(0)
-
-    // Signed Cloudinary Upload (More reliable)
-    setLoading(true)
-    setStatus("uploading")
-    setProgress(0)
-
+    
     try {
-        // 1. Get Signature from our backend
-        console.log("📡 Getting upload signature...");
-        const signRes = await fetch("/api/upload/sign", { method: "POST" })
-        const signData = await signRes.json()
+        const configRes = await fetch("/api/config")
+        const { cloudinaryCloudName, uploadPreset } = await configRes.json()
 
-        if (signData.error) throw new Error(signData.error)
-
-        const { signature, timestamp, cloudName, apiKey } = signData
-
-        // 2. Upload to Cloudinary via XHR (for progress)
-        const formData = new FormData()
-        formData.append("file", selectedFile!)
-        formData.append("api_key", apiKey)
-        formData.append("timestamp", timestamp.toString())
-        formData.append("signature", signature)
-        // Note: No folder here to match the simplified signature
-
-        console.log("☁️ Starting signed upload to Cloudinary via fetch...");
-
-        const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, {
-            method: "POST",
-            body: formData
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error("❌ Cloudinary Error:", errorData);
-            throw new Error(errorData.error?.message || "Cloudinary upload failed");
+        if (!(window as any).cloudinary) {
+            toast.error("Cloudinary script not loaded. Please refresh the page.")
+            setLoading(false)
+            return
         }
 
-        const cloudinaryData = await response.json();
-        console.log("✅ Cloudinary Success:", cloudinaryData)
-        const finalUrl = cloudinaryData.secure_url
+        const myWidget = (window as any).cloudinary.createUploadWidget(
+            {
+                cloudName: cloudinaryCloudName,
+                uploadPreset: uploadPreset || "ml_default",
+                sources: ["local", "url", "camera"],
+                multiple: false,
+                resourceType: "video",
+                folder: "videos",
+                clientAllowedFormats: ["mp4", "webm", "ogg"],
+                maxFileSize: 1000000000, // 1GB limit (can be increased)
+                styles: {
+                    palette: {
+                        window: "#000000",
+                        windowBorder: "#90a0b3",
+                        tabIcon: "#0078ff",
+                        menuIcons: "#5a616a",
+                        textDark: "#000000",
+                        textLight: "#ffffff",
+                        link: "#0078ff",
+                        action: "#ff620c",
+                        inactiveTabIcon: "#0e2f5a",
+                        error: "#f44235",
+                        inProgress: "#0078ff",
+                        complete: "#20b832",
+                        sourceBg: "#1a1a2e"
+                    },
+                    fonts: {
+                        default: null,
+                        "'Fira Sans', sans-serif": "https://fonts.googleapis.com/css?family=Fira+Sans"
+                    }
+                }
+            },
+            async (error: any, result: any) => {
+                if (!error && result && result.event === "success") {
+                    console.log("✅ Widget Upload Success:", result.info)
+                    const finalUrl = result.info.secure_url
 
-        // 3. Save to our database
-        console.log("💾 Saving video metadata to DB...");
-        const saveRes = await fetch("/api/videos", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                title,
-                description,
-                videoUrl: finalUrl,
-                categoryId,
-                tags,
-                visibility,
-                fileSize: selectedFile!.size,
-                filePublicId: cloudinaryData.public_id
-            })
-        })
+                    // Save to our database
+                    const saveRes = await fetch("/api/videos", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            title,
+                            description,
+                            videoUrl: finalUrl,
+                            categoryId,
+                            tags,
+                            visibility,
+                            fileSize: result.info.bytes,
+                            filePublicId: result.info.public_id
+                        })
+                    })
 
-        const saveData = await saveRes.json()
-        if (saveData.success) {
-            setUploadedVideo(saveData.video)
-            setIsComplete(true)
-            toast.success("Upload successful!")
-        } else {
-            throw new Error(saveData.error || "Failed to save video details")
-        }
+                    const saveData = await saveRes.json()
+                    if (saveData.success) {
+                        setUploadedVideo(saveData.video)
+                        setIsComplete(true)
+                        toast.success("Upload successful!")
+                    } else {
+                        toast.error(saveData.error || "Failed to save to database")
+                    }
+                    setLoading(false)
+                } else if (error) {
+                    toast.error("Upload failed: " + error.message)
+                    setLoading(false)
+                } else if (result.event === "close") {
+                    setLoading(false)
+                }
+            }
+        )
 
+        myWidget.open()
+        
     } catch (err: any) {
-        toast.error(err.message || "Upload failed")
-        setStatus("error")
-    } finally {
+        toast.error(err.message || "Something went wrong")
         setLoading(false)
     }
   }

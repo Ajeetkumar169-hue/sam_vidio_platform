@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from 'next/font/google'
 import { AuthProvider } from '@/lib/auth-context'
 import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
+import Script from 'next/script'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains-mono' })
@@ -44,6 +45,7 @@ export default function RootLayout({
               {children}
             </div>
             <Toaster />
+            <Script src="https://upload-widget.cloudinary.com/global/all.js" strategy="afterInteractive" />
           </AuthProvider>
         </ThemeProvider>
       </body>
