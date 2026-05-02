@@ -245,6 +245,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, video: result }, { status: 201 })
   } catch (error: any) {
     console.error("❌ API Route Error:", error)
-    return NextResponse.json({ success: false, error: error.message || "Internal Server Error" }, { status: 500 })
+    return NextResponse.json({ 
+      success: false, 
+      error: error.message || "Internal Server Error",
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      details: error.toString()
+    }, { status: 500 })
   }
 }
