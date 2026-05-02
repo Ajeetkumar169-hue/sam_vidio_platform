@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
+import { useTheme } from "next-themes"
 import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,6 +24,7 @@ interface Category {
 }
 
 export default function UploadPage() {
+  const { theme } = useTheme()
   const { user, isLoading: authLoading } = useAuth()
   const router = useRouter()
   const [categories, setCategories] = useState<Category[]>([])
