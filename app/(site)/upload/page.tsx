@@ -295,9 +295,13 @@ export default function UploadPage() {
                                 folder: "videos",
                                 clientAllowedFormats: ["mp4", "webm", "ogg"],
                                 maxFileSize: 1000000000, 
-                                chunk_size: 6000000, // 6MB Chunks
-                                max_chunk_size: 20000000, // 20MB Max Chunk
+                                chunk_size: 10000000, // 10MB Chunks
+                                max_chunk_size: 40000000, // 40MB Max Chunk
                                 auto_minimize: true,
+                                queueOptions: {
+                                    concurrency: 5,
+                                    max_concurrency: 10
+                                },
                                 styles: {
                                     palette: getWidgetStyles(theme || "dark")
                                 }
