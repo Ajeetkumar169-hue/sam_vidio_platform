@@ -31,6 +31,7 @@ export default function UploadPage() {
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [activeTab, setActiveTab] = useState("device")
+  const [uploadEngine, setUploadEngine] = useState<"cloudinary" | "s3">("s3")
 
   // Form State
   const [title, setTitle] = useState("")
@@ -135,7 +136,28 @@ export default function UploadPage() {
         return
     }
 
-    // Save to Database (Video is already uploaded via Widget)
+    // Handle High-Speed S3 Upload
+    if (activeTab === "device" && uploadEngine === "s3") {
+        if (!uploadManager) return
+        setLoading(true)
+        try {
+            const result = await uploadManager.start({
+                title, description, categoryId, tags, visibility
+            })
+            if (result.success) {
+                setUploadedVideo(result.video)
+                setIsComplete(true)
+                toast.success("Turbo Upload Complete!")
+            }
+        } catch (err: any) {
+            toast.error("Upload failed: " + err.message)
+        } finally {
+            setLoading(false)
+        }
+        return
+    }
+
+    // Save to Database (Video is already uploaded via Cloudinary Widget)
     setLoading(true)
     try {
         if (!uploadedVideo?.videoUrl) {
@@ -257,15 +279,49 @@ export default function UploadPage() {
                   </TabsTrigger>
                 </TabsList>
 
+                {activeTab === "device" && (
+                   <div className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-xl mt-4 max-w-xl mx-auto">
+                     <div className="flex items-center gap-3">
+                         <div className={cn(
+                             "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500",
+                             uploadEngine === "s3" ? "bg-primary text-white shadow-lg shadow-primary/30" : "bg-secondary text-muted-foreground"
+                         )}>
+                             <Upload className="w-5 h-5" />
+                         </div>
+                         <div>
+                             <p className="text-sm font-bold">Upload Engine: {uploadEngine === "s3" ? "Turbo Speed (AWS S3)" : "Cloudinary (Standard)"}</p>
+                             <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{uploadEngine === "s3" ? "Parallel multipart upload activated" : "Single stream upload"}</p>
+                         </div>
+                     </div>
+                     <Button 
+                        type="button"
+                        variant="outline" 
+                        size="sm" 
+                        className={cn("rounded-lg font-bold border-primary/20", uploadEngine === "s3" && "bg-primary text-white hover:bg-primary/90 border-none")}
+                        onClick={() => setUploadEngine(prev => prev === "s3" ? "cloudinary" : "s3")}
+                    >
+                         {uploadEngine === "s3" ? "Switch to Standard" : "Switch to Turbo"}
+                     </Button>
+                   </div>
+                )}
+
                 <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-10 mt-8">
 
                 {/* Left Column: Media Selection */}
                 <div className="space-y-6">
                   <TabsContent value="device" className="mt-0 space-y-4">
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      accept="video/*"
+                      onChange={handleFileChange}
+                    />
                     {!selectedFile ? (
-                      <div
-                        onClick={async () => {
-                          try {
+                      uploadEngine === "cloudinary" ? (
+                        <div
+                          onClick={async () => {
+                            try {
                             const configRes = await fetch("/api/config")
                             const { cloudinaryCloudName, uploadPreset } = await configRes.json()
 
@@ -336,15 +392,28 @@ export default function UploadPage() {
                             <p className="text-lg font-semibold">Click to upload or drag & drop</p>
                             <p className="text-sm text-muted-foreground mt-1">MP4, WebM, or OGG (Up to 1TB)</p>
                           </div>
+                          </div>
                         </div>
-                        <input
-                          type="file"
-                          ref={fileInputRef}
-                          className="hidden"
-                          accept="video/*"
-                          onChange={handleFileChange}
-                        />
-                      </div>
+                      ) : (
+                        <div
+                          onClick={() => fileInputRef.current?.click()}
+                          className="group relative flex flex-col items-center justify-center border-2 border-dashed border-primary/40 rounded-2xl h-[300px] md:h-[400px] bg-primary/5 hover:bg-primary/10 hover:border-primary cursor-pointer transition-all duration-300 overflow-hidden"
+                        >
+                          <div className="flex flex-col items-center gap-4 text-center p-6">
+                            <div className="p-5 rounded-full bg-primary text-white group-hover:scale-110 transition-transform duration-300 shadow-xl shadow-primary/20">
+                              <VideoIcon className="h-8 w-8" />
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-2xl font-black text-primary italic uppercase tracking-tighter">TURBO MODE</p>
+                              <p className="text-sm font-bold">Direct Parallel S3 Upload</p>
+                              <p className="text-xs text-muted-foreground mt-2 max-w-xs">Uses 10+ concurrent connections for maximum internet speed.</p>
+                            </div>
+                            <Button type="button" className="mt-4 rounded-full px-8 bg-primary hover:bg-primary/90 font-bold shadow-lg shadow-primary/20">
+                              Fast Select
+                            </Button>
+                          </div>
+                        </div>
+                      )
                     ) : (
                       <div className="relative rounded-2xl overflow-hidden bg-black aspect-video border border-border shadow-lg">
                         {previewUrl && (
