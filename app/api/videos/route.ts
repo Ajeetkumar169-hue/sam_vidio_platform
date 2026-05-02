@@ -207,31 +207,35 @@ export async function POST(req: NextRequest) {
     // 🔥 TIER-1 NOTIFICATION FAN-OUT (Async, outside transaction)
     try {
       const { Subscription } = await import("@/lib/models/Interaction")
-      const Notification = (await import("@/lib/models/Notification")).default
+      const NotificationModel = (await import("@/lib/models/Notification")).default
       
       const channel = await Channel.findById(result.channel);
       const subscribers = await Subscription.find({ channel: result.channel })
         .select("subscriber")
         .lean()
 
-      if (subscribers.length > 0) {
-        const BATCH_SIZE = 1000
+      if (subscribers && subscribers.length > 0) {
+        const BATCH_SIZE = 100
         for (let i = 0; i < subscribers.length; i += BATCH_SIZE) {
           const batch = subscribers.slice(i, i + BATCH_SIZE)
-          await Notification.insertMany(
-            batch.map((s: any) => ({
-              recipient: s.subscriber,
-              actor: channel?._id,
-              video: result._id,
-              type: "upload",
-              meta: {
-                title: result.title,
-                thumbnail: result.thumbnailUrl,
-                channelName: channel?.name
-              }
-            })),
-            { ordered: false }
-          )
+          try {
+            await NotificationModel.insertMany(
+              batch.map((s: any) => ({
+                recipient: s.subscriber,
+                actor: channel?._id,
+                video: result._id,
+                type: "upload",
+                meta: {
+                  title: result.title,
+                  thumbnail: result.thumbnailUrl,
+                  channelName: channel?.name
+                }
+              })),
+              { ordered: false }
+            )
+          } catch (batchErr) {
+            console.error("Batch notification error:", batchErr)
+          }
         }
       }
     } catch (notifErr: any) {
