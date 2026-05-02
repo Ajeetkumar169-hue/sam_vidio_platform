@@ -19,7 +19,6 @@ export async function POST() {
         const signature = cloudinary.utils.api_sign_request(
             {
                 timestamp: timestamp,
-                folder: "videos",
             },
             process.env.CLOUDINARY_API_SECRET!
         );

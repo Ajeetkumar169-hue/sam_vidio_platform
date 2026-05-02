@@ -159,7 +159,7 @@ export default function UploadPage() {
         formData.append("api_key", apiKey)
         formData.append("timestamp", timestamp.toString())
         formData.append("signature", signature)
-        formData.append("folder", "videos")
+        // Note: No folder here to match the simplified signature
 
         console.log("☁️ Starting signed upload to Cloudinary...");
 
