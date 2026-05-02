@@ -35,6 +35,9 @@ export async function GET(req: NextRequest) {
     })
   } catch (error: any) {
     console.error("❌ Channels fetch error:", error)
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 })
+    return NextResponse.json({ 
+      error: error.message || "Internal server error",
+      details: error.toString()
+    }, { status: 500 })
   }
 }
