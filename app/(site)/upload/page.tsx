@@ -99,7 +99,7 @@ export default function UploadPage() {
       return
     }
 
-    if (activeTab === "device" && (!selectedFile || !uploadManager)) {
+    if (activeTab === "device" && !selectedFile) {
       toast.error("Please select a video file")
       return
     }
@@ -133,19 +133,88 @@ export default function UploadPage() {
         return
     }
 
-    // S3 Multipart Upload
+    // Direct Cloudinary Upload
     setLoading(true)
+    setStatus("uploading")
+    setProgress(0)
+
     try {
-        const result = await uploadManager!.start({
-            title, description, categoryId, tags, visibility
-        })
-        setUploadedVideo(result.video)
-        setIsComplete(true)
-        toast.success("Upload successful!")
-    } catch (err: any) {
-        if (err.name !== "AbortError") {
-            toast.error(err.message || "Upload failed")
+        // 1. Get Config
+        const configRes = await fetch("/api/config")
+        const { cloudinaryCloudName, uploadPreset, isMock } = await configRes.json()
+
+        if (isMock) {
+            // Fallback to S3 Manager if specifically in Mock mode locally
+            const result = await uploadManager!.start({ title, description, categoryId, tags, visibility })
+            setUploadedVideo(result.video)
+            setIsComplete(true)
+            toast.success("Upload successful!")
+            return
         }
+
+        if (!cloudinaryCloudName) {
+            throw new Error("Cloudinary not configured on Vercel")
+        }
+
+        // 2. Upload to Cloudinary via XHR (for progress)
+        const formData = new FormData()
+        formData.append("file", selectedFile!)
+        formData.append("upload_preset", uploadPreset)
+        formData.append("folder", "videos")
+
+        const xhr = new XMLHttpRequest()
+        xhr.open("POST", `https://api.cloudinary.com/v1_1/${cloudinaryCloudName}/video/upload`)
+
+        xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+                const percent = Math.round((event.loaded / event.total) * 100)
+                setProgress(percent)
+            }
+        }
+
+        const uploadPromise = new Promise((resolve, reject) => {
+            xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    resolve(JSON.parse(xhr.responseText))
+                } else {
+                    reject(new Error("Cloudinary upload failed"))
+                }
+            }
+            xhr.onerror = () => reject(new Error("Network error during upload"))
+            xhr.send(formData)
+        })
+
+        const cloudinaryData: any = await uploadPromise
+        const finalUrl = cloudinaryData.secure_url
+
+        // 3. Save to our database
+        const saveRes = await fetch("/api/videos", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                title,
+                description,
+                videoUrl: finalUrl,
+                categoryId,
+                tags,
+                visibility,
+                fileSize: selectedFile!.size,
+                filePublicId: cloudinaryData.public_id
+            })
+        })
+
+        const saveData = await saveRes.json()
+        if (saveData.success) {
+            setUploadedVideo(saveData.video)
+            setIsComplete(true)
+            toast.success("Upload successful!")
+        } else {
+            throw new Error(saveData.error || "Failed to save video details")
+        }
+
+    } catch (err: any) {
+        toast.error(err.message || "Upload failed")
+        setStatus("error")
     } finally {
         setLoading(false)
     }
