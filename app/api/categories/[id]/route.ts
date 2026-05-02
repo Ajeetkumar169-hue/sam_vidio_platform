@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import mongoose from "mongoose"
 import connectDB from "@/lib/db"
 import Category from "@/lib/models/Category"
 import Video from "@/lib/models/Video"
@@ -11,6 +12,11 @@ export async function DELETE(
   try {
     await connectDB()
     const { id } = await params
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: "Invalid Category ID format" }, { status: 400 })
+    }
+
     const user = await getCurrentUser()
 
     if (!user || user.role !== "admin") {
