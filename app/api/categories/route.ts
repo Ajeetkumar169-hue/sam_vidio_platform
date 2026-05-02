@@ -3,7 +3,7 @@ import connectDB from "@/lib/db"
 import Category from "@/lib/models/Category"
 import { getCurrentUser } from "@/lib/auth"
 
-export const revalidate = 3600
+export const dynamic = 'force-dynamic'
 
 const DEFAULT_CATEGORIES = [
   { name: "Viral Videos", slug: "viral-videos", description: "Trending and viral content that everyone is watching" },
@@ -37,10 +37,6 @@ export async function GET() {
         ...c,
         id: c._id.toString()
       }))
-    }, {
-      headers: {
-        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=7200"
-      }
     })
   } catch (error: any) {
     console.error("❌ Categories fetch error:", error)
