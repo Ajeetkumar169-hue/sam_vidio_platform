@@ -1,41 +1,41 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { CreateMultipartUploadCommand } from "@aws-sdk/client-s3";
 import { s3Client, BUCKET_NAME, MOCK_MODE } from "@/lib/s3-client";
 import { getCurrentUser } from "@/lib/auth";
 import { randomUUID } from "crypto";
+import { ApiResponse } from "@/lib/api-response";
+import CONFIG from "@/lib/config";
 
 export async function POST(req: NextRequest) {
     try {
         const user = await getCurrentUser();
-        if (!user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+        if (!user) return ApiResponse.unauthorized();
 
         const { filename, contentType, fileSize } = await req.json();
 
         if (!filename || !contentType) {
-            return NextResponse.json({ error: "Missing metadata" }, { status: 400 });
+            return ApiResponse.badRequest("Missing filename or content type");
         }
 
         // Server-side validation
-        const MAX_SIZE = 1024 * 1024 * 1024 * 1024; // 1TB
+        const MAX_SIZE = 1024 * 1024 * 1024 * 1024; // 1TB (From business requirement)
         if (fileSize > MAX_SIZE) {
-            return NextResponse.json({ error: "File too large (Max 1TB)" }, { status: 400 });
+            return ApiResponse.badRequest(`File too large. Max size is 1TB.`);
         }
 
-        const allowedTypes = ["video/mp4", "video/webm", "video/ogg", "video/quicktime"];
-        if (!allowedTypes.includes(contentType)) {
-            return NextResponse.json({ error: "Invalid video format" }, { status: 400 });
+        const allowedTypes = ["video/mp4", "video/webm", "video/ogg", "video/quicktime", "application/x-mpegURL"];
+        if (!allowedTypes.includes(contentType) && !contentType.startsWith("video/")) {
+            return ApiResponse.badRequest("Unsupported video format");
         }
 
         const key = `videos/${randomUUID()}-${filename}`;
 
         if (MOCK_MODE) {
             console.log("📁 [MOCK S3] Initializing mock upload for:", filename);
-            return NextResponse.json({
+            return ApiResponse.success({
                 uploadId: `mock-${randomUUID()}`,
                 key: key,
-            });
+            }, "Mock upload initialized");
         }
 
         const command = new CreateMultipartUploadCommand({
@@ -44,16 +44,16 @@ export async function POST(req: NextRequest) {
             ContentType: contentType,
         });
 
-        console.log(`📁 [S3 INIT] Initializing session. Bucket: ${BUCKET_NAME}, Region: ${process.env.AWS_REGION || "us-east-1"}`);
+        console.log(`📁 [S3 INIT] Initializing session. Bucket: ${BUCKET_NAME}, Region: ${CONFIG.S3.REGION}`);
 
         const response = await s3Client.send(command);
 
-        return NextResponse.json({
+        return ApiResponse.success({
             uploadId: response.UploadId,
             key: key,
-        });
+        }, "Upload session initialized successfully");
+        
     } catch (error: any) {
-        console.error("❌ S3 Init Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return ApiResponse.error(error.message, 500, error);
     }
 }

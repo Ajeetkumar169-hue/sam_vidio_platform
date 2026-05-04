@@ -7,6 +7,7 @@ export interface UploadProgress {
     status: 'idle' | 'uploading' | 'paused' | 'complete' | 'error';
     message?: string;
     speedMbps?: number;
+    eta?: number;
     edgeLocation?: string;
     aiStatus?: string;
 }
@@ -52,6 +53,9 @@ export class S3UploadManager {
         const percent = this.file.size > 0 ? Math.floor((this.uploadedBytes / this.file.size) * 100) : 0;
         const avgSpeed = this.throughputHistory.reduce((a,b) => a+b, 0) / (this.throughputHistory.length || 1);
 
+        const remainingBytes = this.file.size - this.uploadedBytes;
+        const eta = avgSpeed > 0 ? Math.round((remainingBytes * 8) / (avgSpeed * 1024 * 1024)) : 0;
+
         return {
             percent: Math.min(percent, 100),
             uploadedBytes: this.uploadedBytes,
@@ -59,6 +63,7 @@ export class S3UploadManager {
             status: this.status,
             message: this.lastMessage,
             speedMbps: Math.round(avgSpeed * 10) / 10,
+            eta: eta > 0 ? eta : 0,
             edgeLocation: "Zero-Bottleneck Edge Backbone (Active)",
             aiStatus: this.aiStatus
         };
@@ -246,9 +251,31 @@ export class S3UploadManager {
         this.workers = [];
     }
 
+    public async checkResume(): Promise<boolean> {
+        const session = await idbGet(this.getSessionKey());
+        if (session) {
+            this.uploadId = session.uploadId;
+            this.key = session.key;
+            this.parts = session.parts || [];
+            // Assume 16MB chunks for progress estimation
+            this.uploadedBytes = this.parts.reduce((acc, p) => acc + (16 * 1024 * 1024), 0);
+            this.uploadedBytes = Math.min(this.uploadedBytes, this.file.size);
+            this.status = 'paused';
+            return true;
+        }
+        return false;
+    }
+
     pause() {
         this.status = 'paused';
         this.killWorkers();
         this.emitProgress();
+    }
+
+    async cancel() {
+        this.status = 'idle';
+        this.killWorkers();
+        await idbDelete(this.getSessionKey());
+        this.emitProgress({ message: "Upload cancelled by user." });
     }
 }

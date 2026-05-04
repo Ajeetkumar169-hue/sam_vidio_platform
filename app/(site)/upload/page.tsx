@@ -1,654 +1,187 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useTheme } from "next-themes"
 import { useAuth } from "@/lib/auth-context"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
+import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Smartphone, Link as LinkIcon, Loader2, Upload } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { S3TurboUploader } from "@/components/upload/s3-turbo-uploader"
+import { VideoMetadataForm } from "@/components/upload/video-metadata-form"
 import { toast } from "sonner"
-import { Upload, Loader2, Link as LinkIcon, Smartphone, Video as VideoIcon, X, CheckCircle2, Pause, Play } from "lucide-react"
-import { S3UploadManager, UploadProgress } from "@/lib/s3-upload-manager"
-import { cn } from "@/lib/utils"
-
-interface Category {
-  _id?: string
-  id?: string
-  name: string
-  slug: string
-}
 
 export default function UploadPage() {
-  const { theme } = useTheme()
-  const { user, isLoading: authLoading } = useAuth()
-  const router = useRouter()
-  const [categories, setCategories] = useState<Category[]>([])
-  const [loading, setLoading] = useState(false)
-  const [progress, setProgress] = useState(0)
-  const [activeTab, setActiveTab] = useState("device")
-  const [uploadEngine, setUploadEngine] = useState<"cloudinary" | "s3">("s3")
+    const { user, isLoading: authLoading } = useAuth()
+    const router = useRouter()
+    const [categories, setCategories] = useState([])
+    const [activeTab, setActiveTab] = useState("device")
+    const [isComplete, setIsComplete] = useState(false)
+    const [uploadedVideo, setUploadedVideo] = useState<any>(null)
+    const [loading, setLoading] = useState(false)
 
-  // Form State
-  const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
-  const [videoUrl, setVideoUrl] = useState("")
-  const [categoryId, setCategoryId] = useState("")
-  const [tags, setTags] = useState("")
-  const [visibility, setVisibility] = useState("public")
+    // Form State
+    const [formData, setFormData] = useState({
+        title: "",
+        description: "",
+        categoryId: "",
+        tags: "",
+        visibility: "public",
+        videoUrl: ""
+    })
 
-  // File State
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+    useEffect(() => {
+        fetch("/api/categories")
+            .then(r => r.json())
+            .then(d => setCategories(d.data || d.categories || []))
+            .catch(() => {})
+    }, [])
 
-  useEffect(() => {
-    fetch("/api/categories")
-      .then((r) => r.json())
-      .then((d) => setCategories(d.categories || []))
-      .catch(() => { })
-  }, [])
+    useEffect(() => {
+        if (!authLoading && !user) router.push("/login")
+    }, [user, authLoading, router])
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push("/login")
-    }
-  }, [user, authLoading, router])
-
-  const [uploadManager, setUploadManager] = useState<S3UploadManager | null>(null)
-  const [status, setStatus] = useState<UploadProgress["status"]>("idle")
-  const [isComplete, setIsComplete] = useState(false)
-  const [uploadedVideo, setUploadedVideo] = useState<any>(null)
-  const [speedMbps, setSpeedMbps] = useState<number>(0)
-  const [eta, setEta] = useState<number>(0)
-  const [uploadMessage, setUploadMessage] = useState<string>("")
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      if (!file.type.startsWith("video/")) {
-        toast.error("Please select a valid video file")
-        return
-      }
-      setSelectedFile(file)
-      setTitle(file.name.split(".")[0])
-      const url = URL.createObjectURL(file)
-      setPreviewUrl(url)
-
-      const manager = new S3UploadManager(file, (p) => {
-          setProgress(p.percent)
-          setStatus(p.status)
-          if (p.speedMbps) setSpeedMbps(p.speedMbps)
-          if (p.eta) setEta(p.eta)
-          if (p.message) setUploadMessage(p.message)
-      })
-      setUploadManager(manager)
-
-      // Check IndexedDB for existing session
-      manager.checkResume().then((hasSession) => {
-          if (hasSession) {
-              toast.info("Unfinished upload detected. Click 'Publish' to resume.")
-              setProgress(manager.getProgress().percent)
-              setStatus("paused")
-          }
-      })
-    }
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!title || !categoryId) {
-      toast.error("Please fill in all required fields")
-      return
+    const handleFormChange = (field: string, value: string) => {
+        setFormData(prev => ({ ...prev, [field]: value }))
     }
 
-    if (activeTab === "device" && !selectedFile) {
-      toast.error("Please select a video file")
-      return
-    }
-
-    if (activeTab === "link") {
-        if (!videoUrl) {
-           toast.error("Please provide a video URL")
-           return
+    const handleLinkSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!formData.title || !formData.categoryId || !formData.videoUrl) {
+            return toast.error("Please fill title, category, and video link")
         }
+
         setLoading(true)
         try {
             const res = await fetch("/api/videos", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    title, description, videoUrl, categoryId, tags, visibility
-                })
+                body: JSON.stringify(formData)
             })
-            const data = await res.json()
-            if (data.success) {
-                toast.success("Link video added!")
+            const result = await res.json()
+            if (result.success) {
+                toast.success("Video linked successfully!")
                 router.push("/dashboard")
             } else {
-                toast.error(data.error || "Failed to add video")
+                toast.error(result.error || "Failed to link video")
             }
         } catch (err) {
             toast.error("Network error")
         } finally {
             setLoading(false)
         }
-        return
     }
 
-    // Handle High-Speed S3 Upload
-    if (activeTab === "device" && uploadEngine === "s3") {
-        if (!uploadManager) return
-        setLoading(true)
-        try {
-            const result = await uploadManager.start({
-                title, description, categoryId, tags, visibility
-            })
-            if (result.success) {
-                setUploadedVideo(result.video)
-                setIsComplete(true)
-                toast.success("Turbo Upload Complete!")
-            }
-        } catch (err: any) {
-            toast.error("Upload failed: " + err.message)
-        } finally {
-            setLoading(false)
-        }
-        return
+    if (authLoading || !user) {
+        return (
+            <div className="flex min-h-[60vh] items-center justify-center">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            </div>
+        )
     }
 
-    // Save to Database (Video is already uploaded via Cloudinary Widget)
-    setLoading(true)
-    try {
-        if (!uploadedVideo?.videoUrl) {
-            toast.error("Please upload a video first by clicking the upload box.")
-            setLoading(false)
-            return
-        }
-
-        const saveRes = await fetch("/api/videos", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                title,
-                description,
-                videoUrl: uploadedVideo.videoUrl,
-                categoryId,
-                tags,
-                visibility,
-                fileSize: uploadedVideo.bytes,
-                filePublicId: uploadedVideo.publicId
-            })
-        })
-
-        const saveData = await saveRes.json()
-        if (saveData.success) {
-            setUploadedVideo({ ...uploadedVideo, ...saveData.video })
-            setIsComplete(true)
-            toast.success("Video published successfully!")
-        } else {
-            toast.error(saveData.error || "Failed to save video details")
-        }
-    } catch (err: any) {
-        toast.error("Database error: " + err.message)
-    } finally {
-        setLoading(false)
-    }
-  }
-
-  const handlePause = () => {
-      uploadManager?.pause()
-  }
-
-  const handleResume = () => {
-      handleSubmit(new Event('submit') as any)
-  }
-
-  const handleCancel = async () => {
-      if (confirm("Are you sure you want to cancel this upload? All progress will be lost.")) {
-          await uploadManager?.cancel()
-          clearFile()
-          setUploadManager(null)
-          setStatus("idle")
-          setProgress(0)
-          setLoading(false)
-      }
-  }
-
-  const clearFile = () => {
-    setSelectedFile(null)
-    if (previewUrl) URL.revokeObjectURL(previewUrl)
-    setPreviewUrl(null)
-    if (fileInputRef.current) fileInputRef.current.value = ""
-    setIsComplete(false)
-    setUploadedVideo(null)
-  }
-
-  if (authLoading || !user) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-      </div>
-    )
-  }
+        <div className="mx-auto max-w-screen-xl px-4 py-8 md:py-12">
+            <div className="mx-auto max-w-4xl space-y-8">
+                <div className="text-center space-y-2">
+                    <h1 className="text-3xl font-black tracking-tight md:text-5xl italic uppercase text-primary">
+                        {isComplete ? "UPLOAD SUCCESS!" : "TURBO UPLOAD"}
+                    </h1>
+                    <p className="text-muted-foreground font-medium">
+                        {isComplete ? "Your content is being processed" : "YouTube-Scale Parallel Ingestion Engine V10"}
+                    </p>
+                </div>
 
-  return (
-    <div className="mx-auto max-w-screen-xl px-4 py-8 md:py-12">
-      <div className="mx-auto max-w-4xl space-y-8">
-        <div className="space-y-2 text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-            {isComplete ? "Upload Complete!" : "Upload Video"}
-          </h1>
-          <p className="text-muted-foreground">
-            {isComplete ? "Your video is now live" : "Share your content. Only Title and Category are required."}
-          </p>
-        </div>
+                {isComplete && uploadedVideo ? (
+                    <Card className="border-none bg-card shadow-2xl shadow-primary/10 rounded-3xl overflow-hidden">
+                        <CardContent className="p-8 flex flex-col items-center gap-6">
+                            <div className="w-full aspect-video rounded-2xl overflow-hidden bg-black shadow-inner">
+                                <video src={uploadedVideo.videoUrl} controls className="w-full h-full object-contain" />
+                            </div>
+                            <div className="flex gap-4 w-full">
+                                <Button variant="outline" className="flex-1 h-14 rounded-2xl font-bold" onClick={() => setIsComplete(false)}>Upload Another</Button>
+                                <Button className="flex-1 h-14 rounded-2xl font-bold" onClick={() => router.push("/dashboard")}>Go to Dashboard</Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <Card className="border-none bg-card shadow-2xl shadow-primary/5 rounded-3xl overflow-hidden">
+                        <CardContent className="p-6 md:p-10">
+                            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+                                <TabsList className="grid w-full grid-cols-2 h-14 bg-secondary/30 rounded-2xl p-1 max-w-md mx-auto">
+                                    <TabsTrigger value="device" className="rounded-xl font-bold data-[state=active]:bg-primary data-[state=active]:text-white transition-all">
+                                        <Smartphone className="mr-2 h-4 w-4" /> Device
+                                    </TabsTrigger>
+                                    <TabsTrigger value="link" className="rounded-xl font-bold data-[state=active]:bg-primary data-[state=active]:text-white transition-all">
+                                        <LinkIcon className="mr-2 h-4 w-4" /> Link
+                                    </TabsTrigger>
+                                </TabsList>
 
-        {isComplete && uploadedVideo ? (
-          <Card className="border-none bg-card shadow-2xl shadow-green-500/5">
-            <CardContent className="p-8 flex flex-col items-center gap-6">
-              <div className="w-full aspect-video rounded-2xl overflow-hidden bg-black shadow-lg">
-                <video src={uploadedVideo.videoUrl} controls className="w-full h-full object-contain" />
-              </div>
-              <div className="text-center space-y-2">
-                <h3 className="text-xl font-bold">{uploadedVideo.title}</h3>
-                <p className="text-sm text-muted-foreground">Successfully uploaded to S3</p>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-4 w-full">
-                <Button variant="outline" className="flex-1 h-12 rounded-xl" onClick={clearFile}>
-                  Upload Another
-                </Button>
-                <Button className="flex-1 h-12 rounded-xl" onClick={() => router.push("/dashboard")}>
-                  Go to Dashboard
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="mt-8 border-none bg-card shadow-2xl shadow-primary/5 min-h-[500px] overflow-hidden">
-            <CardContent className="p-4 sm:p-6 md:p-10 space-y-8">
-              <Tabs defaultValue="device" className="w-full" onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-2 h-14 p-1 bg-secondary/50 rounded-xl mx-auto max-w-sm lg:max-w-md shadow-inner">
-                  <TabsTrigger value="device" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-md transition-all text-sm font-bold">
-                    <Smartphone className="mr-2 h-4 w-4" />
-                    Device Upload
-                  </TabsTrigger>
-                  <TabsTrigger value="link" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-md transition-all text-sm font-bold">
-                    <LinkIcon className="mr-2 h-4 w-4" />
-                    Link Upload
-                  </TabsTrigger>
-                </TabsList>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                                    <div className="space-y-6">
+                                        <TabsContent value="device" className="mt-0">
+                                            <S3TurboUploader 
+                                                metadata={formData}
+                                                onFileSelected={(file) => handleFormChange("title", file?.name.split(".")[0] || "")}
+                                                onUploadComplete={(video) => {
+                                                    setUploadedVideo(video)
+                                                    setIsComplete(true)
+                                                }}
+                                            />
+                                        </TabsContent>
 
-                {activeTab === "device" && (
-                   <div className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-xl mt-4 max-w-xl mx-auto">
-                     <div className="flex items-center gap-3">
-                         <div className={cn(
-                             "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500",
-                             uploadEngine === "s3" ? "bg-primary text-white shadow-lg shadow-primary/30" : "bg-secondary text-muted-foreground"
-                         )}>
-                             <Upload className="w-5 h-5" />
-                         </div>
-                         <div>
-                             <p className="text-sm font-bold">Upload Engine: {uploadEngine === "s3" ? "Turbo Speed (AWS S3)" : "Cloudinary (Standard)"}</p>
-                             <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{uploadEngine === "s3" ? "Parallel multipart upload activated" : "Single stream upload"}</p>
-                         </div>
-                     </div>
-                     <Button 
-                        type="button"
-                        variant="outline" 
-                        size="sm" 
-                        className={cn("rounded-lg font-bold border-primary/20", uploadEngine === "s3" && "bg-primary text-white hover:bg-primary/90 border-none")}
-                        onClick={() => setUploadEngine(prev => prev === "s3" ? "cloudinary" : "s3")}
-                    >
-                         {uploadEngine === "s3" ? "Switch to Standard" : "Switch to Turbo"}
-                     </Button>
-                   </div>
+                                        <TabsContent value="link" className="mt-0 space-y-4">
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-bold opacity-70">Video URL</label>
+                                                <div className="relative">
+                                                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                    <input 
+                                                        className="w-full h-12 pl-10 bg-secondary/30 border-none rounded-xl focus:ring-1 focus:ring-primary"
+                                                        placeholder="https://example.com/video.mp4"
+                                                        value={formData.videoUrl}
+                                                        onChange={(e) => handleFormChange("videoUrl", e.target.value)}
+                                                    />
+                                                </div>
+                                            </div>
+                                            {formData.videoUrl && (
+                                                <div className="aspect-video rounded-xl overflow-hidden bg-black border border-border">
+                                                    <video src={formData.videoUrl} controls className="w-full h-full object-contain" />
+                                                </div>
+                                            )}
+                                            <Button 
+                                                className="w-full h-12 rounded-xl font-bold" 
+                                                disabled={loading}
+                                                onClick={handleLinkSubmit}
+                                            >
+                                                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Link Video"}
+                                            </Button>
+                                        </TabsContent>
+                                    </div>
+
+                                    <div className="space-y-6">
+                                        <VideoMetadataForm 
+                                            data={formData}
+                                            categories={categories}
+                                            onChange={handleFormChange}
+                                        />
+                                        <div className="pt-4 flex flex-col gap-3">
+                                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold text-center">
+                                                * Title and Category are required
+                                            </p>
+                                            {activeTab === "device" && (
+                                                <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 flex items-center gap-3">
+                                                    <Upload className="h-5 w-5 text-primary" />
+                                                    <p className="text-xs font-medium text-primary">Turbo Mode: Using parallel S3 shards for 10x faster ingestion.</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </Tabs>
+                        </CardContent>
+                    </Card>
                 )}
-
-                <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-10 mt-8">
-
-                {/* Left Column: Media Selection */}
-                <div className="space-y-6">
-                  <TabsContent value="device" className="mt-0 space-y-4">
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      className="hidden"
-                      accept="video/*"
-                      onChange={handleFileChange}
-                    />
-                    {!selectedFile ? (
-                      uploadEngine === "cloudinary" ? (
-                        <div
-                          onClick={async () => {
-                            try {
-                            const configRes = await fetch("/api/config")
-                            const { cloudinaryCloudName, uploadPreset } = await configRes.json()
-
-                            if (!(window as any).cloudinary) {
-                              toast.error("Cloudinary script loading... please wait 2 seconds.")
-                              return
-                            }
-
-                            const getWidgetStyles = (currentTheme: string) => {
-                              switch (currentTheme) {
-                                case "white":
-                                  return { window: "#ffffff", windowBorder: "#e5e7eb", tabIcon: "#1e1b4b", menuIcons: "#4b5563", textDark: "#000000", textLight: "#ffffff", link: "#1e1b4b", action: "#1e1b4b", inactiveTabIcon: "#9ca3af", error: "#dc2626", inProgress: "#1e1b4b", complete: "#059669", sourceBg: "#f9fafb" };
-                                case "pink":
-                                  return { window: "#fff1f2", windowBorder: "#fecaca", tabIcon: "#e11d48", menuIcons: "#fb7185", textDark: "#000000", textLight: "#ffffff", link: "#e11d48", action: "#e11d48", inactiveTabIcon: "#fda4af", error: "#dc2626", inProgress: "#e11d48", complete: "#22c55e", sourceBg: "#fff1f2" };
-                                default: // dark
-                                  return { window: "#000000", windowBorder: "#1e293b", tabIcon: "#ef4444", menuIcons: "#94a3b8", textDark: "#000000", textLight: "#ffffff", link: "#ef4444", action: "#ef4444", inactiveTabIcon: "#475569", error: "#dc2626", inProgress: "#ef4444", complete: "#22c55e", sourceBg: "#0f172a" };
-                              }
-                            }
-
-                            const myWidget = (window as any).cloudinary.createUploadWidget(
-                              {
-                                cloudName: cloudinaryCloudName,
-                                uploadPreset: uploadPreset || "ml_default",
-                                sources: ["local", "url", "camera"],
-                                multiple: false,
-                                resourceType: "video",
-                                folder: "videos",
-                                clientAllowedFormats: ["mp4", "webm", "ogg"],
-                                maxFileSize: 1000000000, 
-                                chunk_size: 10000000, // 10MB Chunks
-                                max_chunk_size: 40000000, // 40MB Max Chunk
-                                auto_minimize: true,
-                                queueOptions: {
-                                    concurrency: 5,
-                                    max_concurrency: 10
-                                },
-                                styles: {
-                                    palette: getWidgetStyles(theme || "dark")
-                                }
-                              },
-                              (error: any, result: any) => {
-                                if (!error && result && result.event === "success") {
-                                  console.log("✅ Widget Upload Success:", result.info)
-                                  setPreviewUrl(result.info.secure_url)
-                                  setSelectedFile({ name: result.info.original_filename, size: result.info.bytes } as any)
-                                  setUploadedVideo({ 
-                                    videoUrl: result.info.secure_url,
-                                    publicId: result.info.public_id,
-                                    bytes: result.info.bytes
-                                  })
-                                  if (!title) setTitle(result.info.original_filename)
-                                  toast.success("Video uploaded to cloud!")
-                                }
-                              }
-                            )
-                            myWidget.open()
-                          } catch (err) {
-                            toast.error("Failed to open uploader")
-                          }
-                        }}
-                        className="group relative flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/25 rounded-2xl h-[300px] md:h-[400px] bg-secondary/20 hover:bg-secondary/40 hover:border-primary/50 cursor-pointer transition-all duration-300 overflow-hidden"
-                      >
-                        <div className="flex flex-col items-center gap-4 text-center p-6">
-                          <div className="p-5 rounded-full bg-primary/10 text-primary group-hover:scale-110 transition-transform duration-300">
-                            <Upload className="h-8 w-8" />
-                          </div>
-                          <div>
-                            <p className="text-lg font-semibold">Click to upload or drag & drop</p>
-                            <p className="text-sm text-muted-foreground mt-1">MP4, WebM, or OGG (Up to 1TB)</p>
-                          </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div
-                          onClick={() => fileInputRef.current?.click()}
-                          className="group relative flex flex-col items-center justify-center border-2 border-dashed border-primary/40 rounded-2xl h-[300px] md:h-[400px] bg-primary/5 hover:bg-primary/10 hover:border-primary cursor-pointer transition-all duration-300 overflow-hidden"
-                        >
-                          <div className="flex flex-col items-center gap-4 text-center p-6">
-                            <div className="p-5 rounded-full bg-primary text-white group-hover:scale-110 transition-transform duration-300 shadow-xl shadow-primary/20">
-                              <VideoIcon className="h-8 w-8" />
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-2xl font-black text-primary italic uppercase tracking-tighter">TURBO MODE</p>
-                              <p className="text-sm font-bold">Direct Parallel S3 Upload</p>
-                              <p className="text-xs text-muted-foreground mt-2 max-w-xs">Uses 10+ concurrent connections for maximum internet speed.</p>
-                            </div>
-                            <Button type="button" className="mt-4 rounded-full px-8 bg-primary hover:bg-primary/90 font-bold shadow-lg shadow-primary/20">
-                              Fast Select
-                            </Button>
-                          </div>
-                        </div>
-                      )
-                    ) : (
-                      <div className="relative rounded-2xl overflow-hidden bg-black aspect-video border border-border shadow-lg">
-                        {previewUrl && (
-                          <video
-                            src={previewUrl}
-                            controls
-                            className="w-full h-full object-contain"
-                          />
-                        )}
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="icon"
-                          className="absolute top-2 right-2 rounded-full h-8 w-8 opacity-80 hover:opacity-100"
-                          onClick={clearFile}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                        <div className="absolute bottom-4 left-4 right-4 bg-black/60 backdrop-blur-md p-3 rounded-xl flex items-center gap-3 border border-white/10">
-                          <div className="p-2 bg-primary/20 text-primary rounded-lg">
-                            <VideoIcon className="h-5 w-5" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-white text-sm font-medium truncate">{selectedFile.name}</p>
-                            <p className="text-white/60 text-xs">{(selectedFile.size / (1024 * 1024)).toFixed(2)} MB</p>
-                          </div>
-                          <CheckCircle2 className="h-5 w-5 text-green-500" />
-                        </div>
-                      </div>
-                    )}
-                  </TabsContent>
-
-                  <TabsContent value="link" className="mt-0">
-                    <div className="space-y-4">
-                      <div className="flex flex-col gap-2">
-                        <Label htmlFor="videoUrl" className="text-base">Video Feed URL</Label>
-                        <div className="relative group">
-                          <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                          <Input
-                            id="videoUrl"
-                            name="videoUrl"
-                            placeholder="https://example.com/video.mp4"
-                            value={videoUrl}
-                            onChange={(e) => setVideoUrl(e.target.value)}
-                            className="pl-10 h-12 bg-secondary/50 border-none focus-visible:ring-1 focus-visible:ring-primary rounded-xl"
-                          />
-                        </div>
-                        <p className="text-xs text-muted-foreground px-1">
-                          Paste a direct permanent link to an MP4 video file.
-                        </p>
-                      </div>
-
-                      {videoUrl && (
-                        <div className="rounded-2xl overflow-hidden bg-black aspect-video border border-border">
-                          <video
-                            src={videoUrl}
-                            controls
-                            className="w-full h-full object-contain"
-                            onError={(e) => {
-                              // If link is invalid, optionally handle here
-                            }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </TabsContent>
-                </div>
-
-                {/* Right Column: Metadata */}
-                <div className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="flex flex-col gap-2">
-                      <Label htmlFor="title" className="text-base">Title *</Label>
-                      <Input
-                        id="title"
-                        name="title"
-                        placeholder="Give your video a catchy title"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        required
-                        maxLength={150}
-                        className="h-12 bg-secondary/50 border-none focus-visible:ring-1 focus-visible:ring-primary rounded-xl"
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <Label htmlFor="description" className="text-base">Description</Label>
-                      <Textarea
-                        id="description"
-                        name="description"
-                        placeholder="Tell viewers about your video..."
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        rows={4}
-                        maxLength={5000}
-                        className="bg-secondary/50 border-none focus-visible:ring-1 focus-visible:ring-primary rounded-xl resize-none"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="flex flex-col gap-2">
-                        <Label className="text-base">Category *</Label>
-                        <Select value={categoryId} onValueChange={setCategoryId}>
-                          <SelectTrigger id="categoryId" name="categoryId" className="h-12 bg-secondary/50 border-none focus-visible:ring-1 focus-visible:ring-primary rounded-xl">
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-xl">
-                            {categories.map((cat) => (
-                              <SelectItem key={cat._id || cat.id} value={(cat._id || cat.id)!} className="rounded-lg">
-                                {cat.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="flex flex-col gap-2">
-                        <Label className="text-base">Visibility</Label>
-                        <Select value={visibility} onValueChange={setVisibility}>
-                          <SelectTrigger id="visibility" name="visibility" className="h-12 bg-secondary/50 border-none focus-visible:ring-1 focus-visible:ring-primary rounded-xl">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-xl">
-                            <SelectItem value="public" className="rounded-lg">Public</SelectItem>
-                            <SelectItem value="private" className="rounded-lg">Private</SelectItem>
-                            <SelectItem value="unlisted" className="rounded-lg">Unlisted</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <Label htmlFor="tags" className="text-base">Tags</Label>
-                      <Input
-                        id="tags"
-                        name="tags"
-                        placeholder="trending, funny, music"
-                        value={tags}
-                        onChange={(e) => setTags(e.target.value)}
-                        className="h-12 bg-secondary/50 border-none focus-visible:ring-1 focus-visible:ring-primary rounded-xl"
-                      />
-                      <p className="text-xs text-muted-foreground px-1">Comma-separated keywords</p>
-                    </div>
-                  </div>
-
-                  {/* Submission & Progress */}
-                  <div className="pt-4 space-y-4">
-                    {loading && (
-                      <div className="space-y-3 bg-secondary/30 p-4 rounded-xl border border-primary/10">
-                        <div className="flex justify-between text-sm font-bold">
-                          <span className="flex items-center gap-2">
-                             {status === "uploading" && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
-                             {status === "paused" && <Pause className="h-4 w-4 text-yellow-500" />}
-                             {status === "error" && <X className="h-4 w-4 text-destructive" />}
-                             {status.charAt(0).toUpperCase() + status.slice(1)}
-                             {speedMbps > 0 && status === "uploading" && (
-                               <span className="text-xs font-normal text-muted-foreground">{speedMbps} Mbps</span>
-                             )}
-                          </span>
-                          <span className="flex items-center gap-2">
-                            <span className="text-primary">{progress}%</span>
-                            {eta > 0 && status === "uploading" && (
-                              <span className="text-xs text-muted-foreground">
-                                {eta > 60 ? `${Math.round(eta/60)}m` : `${eta}s`} left
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                        <Progress value={progress} className="h-3 rounded-full bg-secondary overflow-hidden">
-                           <div className="h-full bg-primary transition-all duration-300" style={{ width: `${progress}%` }} />
-                        </Progress>
-
-                        {uploadMessage && (
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest text-center animate-pulse">
-                                {uploadMessage}
-                            </p>
-                        )}
-                        
-                        <div className="flex gap-2">
-                            {status === "uploading" && (
-                                <Button type="button" variant="outline" size="sm" className="flex-1 gap-2 rounded-lg" onClick={handlePause}>
-                                    <Pause className="h-3 w-3" /> Pause
-                                </Button>
-                            )}
-                            {status === "paused" && (
-                                <Button type="button" variant="outline" size="sm" className="flex-1 gap-2 rounded-lg" onClick={handleResume}>
-                                    <Play className="h-3 w-3" /> Resume
-                                </Button>
-                            )}
-                            {(status === "uploading" || status === "paused" || status === "error") && (
-                                <Button type="button" variant="ghost" size="sm" className="flex-1 gap-2 text-destructive hover:bg-destructive/10 rounded-lg" onClick={handleCancel}>
-                                    <X className="h-3 w-3" /> Cancel
-                                </Button>
-                            )}
-                        </div>
-                      </div>
-                    )}
-
-                    <Button
-                      type="submit"
-                      disabled={loading || (activeTab === "device" && (!selectedFile || status === "uploading"))}
-                      className="w-full h-14 text-lg font-bold rounded-xl gap-2 shadow-lg shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all"
-                    >
-                      {status === "uploading" ? (
-                        <>
-                          <Loader2 className="h-5 w-5 animate-spin" />
-                          Uploading {progress}%
-                        </>
-                      ) : status === "paused" ? (
-                        <>
-                          <Play className="h-5 w-5" />
-                          Resume Upload
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="h-5 w-5" />
-                          Publish Video
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </form>
-              </Tabs>
-            </CardContent>
-          </Card>
-      )}
-      </div>
-    </div>
-  )
+            </div>
+        </div>
+    )
 }
-

@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { UploadPartCommand, ListPartsCommand } from "@aws-sdk/client-s3";
 import { s3AccelClient, BUCKET_NAME, MOCK_MODE } from "@/lib/s3-client";
 import { getCurrentUser } from "@/lib/auth";
+import { ApiResponse } from "@/lib/api-response";
 
 /**
  * SESSION VALIDATION (GET)
@@ -16,35 +17,33 @@ export async function GET(req: NextRequest) {
         const check = searchParams.get("check");
 
         if (!uploadId || !key) {
-            return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
+            return ApiResponse.badRequest("Missing uploadId or key");
         }
 
         if (check === "true") {
             if (MOCK_MODE || uploadId.startsWith("mock-")) {
-                // In mock mode, we assume it's alive if the ID is valid format
-                return new NextResponse(null, { status: 200 });
+                return ApiResponse.success(null, "Session alive (Mock)");
             }
 
             try {
-                // Real S3: verify session is still active
                 await s3AccelClient.send(new ListPartsCommand({
                     Bucket: BUCKET_NAME,
                     Key: key,
                     UploadId: uploadId,
                     MaxParts: 1
                 }));
-                return new NextResponse(null, { status: 200 });
+                return ApiResponse.success(null, "Session alive");
             } catch (e: any) {
                 if (e.name === "NoSuchUpload") {
-                    return new NextResponse(null, { status: 404 });
+                    return ApiResponse.notFound("Upload session expired or not found");
                 }
-                return NextResponse.json({ error: e.message }, { status: 500 });
+                return ApiResponse.error(e.message);
             }
         }
 
-        return NextResponse.json({ error: "Method not allowed" }, { status: 405 });
+        return ApiResponse.badRequest("Invalid query parameter 'check'");
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return ApiResponse.error(error.message);
     }
 }
 
@@ -54,12 +53,12 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
     try {
         const user = await getCurrentUser();
-        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!user) return ApiResponse.unauthorized();
 
         const { key, uploadId, partNumbers } = await req.json();
 
         if (!key || !uploadId || !partNumbers || !Array.isArray(partNumbers)) {
-            return NextResponse.json({ error: "Invalid parameters" }, { status: 400 });
+            return ApiResponse.badRequest("Invalid or missing parameters");
         }
 
         if (MOCK_MODE || uploadId.startsWith("mock-")) {
@@ -67,7 +66,7 @@ export async function POST(req: NextRequest) {
                 partNumber,
                 url: `/api/upload/mock?uploadId=${uploadId}&key=${encodeURIComponent(key)}&partNumber=${partNumber}`
             }));
-            return NextResponse.json({ urls });
+            return ApiResponse.success({ urls });
         }
 
         const urlPromises = partNumbers.map(async (partNumber: number) => {
@@ -82,9 +81,8 @@ export async function POST(req: NextRequest) {
         });
 
         const urls = await Promise.all(urlPromises);
-        return NextResponse.json({ urls });
+        return ApiResponse.success({ urls }, "Batch presigned URLs generated");
     } catch (error: any) {
-        console.error("❌ Batch Sign Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return ApiResponse.error(error.message, 500, error);
     }
 }
