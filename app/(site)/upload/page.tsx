@@ -64,6 +64,8 @@ export default function UploadPage() {
   const [status, setStatus] = useState<UploadProgress["status"]>("idle")
   const [isComplete, setIsComplete] = useState(false)
   const [uploadedVideo, setUploadedVideo] = useState<any>(null)
+  const [speedMbps, setSpeedMbps] = useState<number>(0)
+  const [eta, setEta] = useState<number>(0)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -77,21 +79,22 @@ export default function UploadPage() {
       const url = URL.createObjectURL(file)
       setPreviewUrl(url)
 
-      // Instantiate manager to check for existing sessions
       const manager = new S3UploadManager(file, (p) => {
           setProgress(p.percent)
           setStatus(p.status)
+          if (p.speedMbps) setSpeedMbps(p.speedMbps)
+          if (p.eta) setEta(p.eta)
       })
       setUploadManager(manager)
-      
-      // If session was loaded (status will be 'paused' if session exists in manager constructor)
-      setTimeout(() => {
-          if (manager.getProgress().status === "paused") {
+
+      // Check IndexedDB for existing session
+      manager.checkResume().then((hasSession) => {
+          if (hasSession) {
               toast.info("Unfinished upload detected. Click 'Publish' to resume.")
               setProgress(manager.getProgress().percent)
               setStatus("paused")
           }
-      }, 100)
+      })
     }
   }
 
@@ -570,8 +573,18 @@ export default function UploadPage() {
                              {status === "paused" && <Pause className="h-4 w-4 text-yellow-500" />}
                              {status === "error" && <X className="h-4 w-4 text-destructive" />}
                              {status.charAt(0).toUpperCase() + status.slice(1)}
+                             {speedMbps > 0 && status === "uploading" && (
+                               <span className="text-xs font-normal text-muted-foreground">{speedMbps} Mbps</span>
+                             )}
                           </span>
-                          <span className="text-primary">{progress}%</span>
+                          <span className="flex items-center gap-2">
+                            <span className="text-primary">{progress}%</span>
+                            {eta > 0 && status === "uploading" && (
+                              <span className="text-xs text-muted-foreground">
+                                {eta > 60 ? `${Math.round(eta/60)}m` : `${eta}s`} left
+                              </span>
+                            )}
+                          </span>
                         </div>
                         <Progress value={progress} className="h-3 rounded-full bg-secondary overflow-hidden">
                            <div className="h-full bg-primary transition-all duration-300" style={{ width: `${progress}%` }} />
