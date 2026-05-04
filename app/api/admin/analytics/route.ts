@@ -36,6 +36,7 @@ export async function GET() {
                     _id: null,
                     totalViews: { $sum: "$views" },
                     totalLikes: { $sum: "$likes" },
+                    totalStorage: { $sum: "$storageSize" },
                     avgSize: { $avg: "$storageSize" }
                 }
             }
@@ -43,6 +44,48 @@ export async function GET() {
 
         const totalUsers = await User.countDocuments()
         const recentUsers = await User.countDocuments({ createdAt: { $gte: fourteenDaysAgo } })
+
+        // Top Categories
+        const topCategories = await Video.aggregate([
+            { $match: { category: { $ne: null } } },
+            {
+                $group: {
+                    _id: "$category",
+                    count: { $sum: 1 },
+                    views: { $sum: "$views" }
+                }
+            },
+            { $sort: { count: -1 } },
+            { $limit: 5 },
+            {
+                $lookup: {
+                    from: "categories",
+                    localField: "_id",
+                    foreignField: "_id",
+                    as: "details"
+                }
+            },
+            { $unwind: "$details" },
+            {
+                $project: {
+                    name: "$details.name",
+                    count: 1,
+                    views: 1
+                }
+            }
+        ])
+
+        // Storage growth trend
+        const storageByDay = await Video.aggregate([
+            { $match: { createdAt: { $gte: fourteenDaysAgo } } },
+            {
+                $group: {
+                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                    size: { $sum: "$storageSize" },
+                },
+            },
+            { $sort: { _id: 1 } },
+        ])
 
         const formatSize = (bytes: number) => {
             if (!bytes) return "0 MB"
@@ -69,8 +112,16 @@ export async function GET() {
 
         return NextResponse.json({
             uploadsByDay,
+            storageByDay,
             growth,
-            engagement
+            engagement,
+            topCategories,
+            summary: {
+                totalUsers,
+                totalVideos: await Video.countDocuments(),
+                totalViews: stats.totalViews,
+                totalStorage: stats.totalStorage || 0
+            }
         })
     } catch (error) {
         console.error("Analytics API Error:", error)
