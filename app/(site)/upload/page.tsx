@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toast } from "sonner"
 import { Upload, Loader2, Link as LinkIcon, Smartphone, Video as VideoIcon, X, CheckCircle2, Pause, Play } from "lucide-react"
 import { S3UploadManager, UploadProgress } from "@/lib/s3-upload-manager"
+import { cn } from "@/lib/utils"
 
 interface Category {
   _id?: string
