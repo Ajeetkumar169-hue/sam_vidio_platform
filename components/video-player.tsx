@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Loader2, AlertCircle } from "lucide-react"
+import Hls from "hls.js"
 
 interface Quality {
   label: string
@@ -16,6 +17,7 @@ interface VideoPlayerProps {
 }
 
 export function VideoPlayer({ url, poster, className = "", qualities = [] }: VideoPlayerProps) {
+  const videoRef = useRef<HTMLVideoElement>(null)
   const [playerType, setPlayerType] = useState<"video" | "iframe" | "unknown">("unknown")
   const [embedUrl, setEmbedUrl] = useState<string>("")
   const [error, setError] = useState<string | null>(null)
@@ -27,10 +29,30 @@ export function VideoPlayer({ url, poster, className = "", qualities = [] }: Vid
   }, [url])
 
   useEffect(() => {
+    if (!currentUrl || !videoRef.current) return
+
+    const isHLS = currentUrl.includes(".m3u8")
+    const video = videoRef.current
+
+    if (isHLS) {
+        if (Hls.isSupported()) {
+            const hls = new Hls()
+            hls.loadSource(currentUrl)
+            hls.attachMedia(video)
+            return () => hls.destroy()
+        } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+            video.src = currentUrl
+        }
+    } else {
+        video.src = currentUrl
+    }
+  }, [currentUrl])
+
+  useEffect(() => {
     if (!currentUrl) return
 
     // 1. Check if it's a direct video link
-    const isDirectVideo = currentUrl.match(/\.(mp4|webm|ogg|mov|m4v)$|^(\/uploads\/)/i)
+    const isDirectVideo = currentUrl.match(/\.(mp4|webm|ogg|mov|m4v|m3u8)$|^(\/uploads\/)/i)
     
     if (isDirectVideo) {
       setPlayerType("video")
@@ -112,7 +134,7 @@ export function VideoPlayer({ url, poster, className = "", qualities = [] }: Vid
   return (
     <div className={`relative group h-full w-full bg-black sm:rounded-lg overflow-hidden ${className}`}>
         <video
-          src={currentUrl}
+          ref={videoRef}
           controls
           className="h-full w-full object-contain"
           poster={poster}
