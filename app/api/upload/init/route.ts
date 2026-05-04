@@ -1,4 +1,3 @@
-export const runtime = 'edge';
 import { NextRequest, NextResponse } from "next/server";
 import { CreateMultipartUploadCommand } from "@aws-sdk/client-s3";
 import { s3Client, BUCKET_NAME, MOCK_MODE } from "@/lib/s3-client";

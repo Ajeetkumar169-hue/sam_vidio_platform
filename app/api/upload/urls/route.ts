@@ -1,4 +1,3 @@
-export const runtime = 'edge';
 import { NextRequest, NextResponse } from "next/server";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { UploadPartCommand, ListPartsCommand } from "@aws-sdk/client-s3";
