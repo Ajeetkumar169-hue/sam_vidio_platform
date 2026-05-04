@@ -25,11 +25,11 @@ export async function PUT(req: NextRequest) {
             }
             const partPath = path.join(tempDir, `${partNumber}.part`);
             fs.writeFileSync(partPath, buffer);
-            console.log(`📁 [MOCK S3] Part ${partNumber} saved locally for ${uploadId} (${buffer.length} bytes)`);
+            console.log(`✅ PUT chunk ${partNumber} → success (Local)`);
         } else {
             // Vercel: consume the stream to prevent hanging, then ack
             await req.arrayBuffer();
-            console.log(`☁️ [MOCK S3/Vercel] Part ${partNumber} acknowledged for ${uploadId}`);
+            console.log(`✅ PUT chunk ${partNumber} → success (Vercel)`);
         }
 
         return new NextResponse(null, {

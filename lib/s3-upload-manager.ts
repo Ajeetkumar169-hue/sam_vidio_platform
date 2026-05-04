@@ -24,6 +24,7 @@ export interface UploadProgress {
     status: "idle" | "uploading" | "paused" | "error" | "complete";
     speedMbps?: number;
     eta?: number; // Estimated time remaining (seconds)
+    message?: string; // e.g. "Initializing...", "Uploading chunk 5/20"
 }
 
 interface UploadSession {
@@ -79,8 +80,8 @@ async function idbDelete(key: string): Promise<void> {
 function getChunkConfig(estimatedMbps: number): { chunkSize: number; concurrency: number } {
     if (estimatedMbps < 5)   return { chunkSize:  8 * 1024 * 1024, concurrency: 2 };
     if (estimatedMbps < 20)  return { chunkSize: 16 * 1024 * 1024, concurrency: 4 };
-    if (estimatedMbps < 100) return { chunkSize: 32 * 1024 * 1024, concurrency: 6 };
-    return                          { chunkSize: 64 * 1024 * 1024, concurrency: 8 };
+    if (estimatedMbps < 100) return { chunkSize: 32 * 1024 * 1024, concurrency: 8 };
+    return                          { chunkSize: 64 * 1024 * 1024, concurrency: 12 };
 }
 
 export class S3UploadManager {
@@ -103,6 +104,8 @@ export class S3UploadManager {
     
     private abortController: AbortController | null = null;
     private retriesMap: Map<number, number> = new Map();
+    private prefetchPromise: Promise<void> | null = null;
+    private activeWorkerCount: number = 0;
 
     constructor(file: File, progressCallback: (p: UploadProgress) => void) {
         this.file = file;
@@ -145,9 +148,36 @@ export class S3UploadManager {
         await idbDelete(this.getSessionKey());
     }
 
+    /**
+     * PIPELINE INTEGRITY: Sync session state with server
+     * Ensures we don't rely on stale IndexedDB data.
+     */
+    private async syncSessionState() {
+        if (!this.uploadId) return;
+        
+        this.emitProgress({ message: "Syncing upload state with server..." });
+        
+        // In a real production app, we'd call S3 ListParts here.
+        // For now, we'll verify the upload session is still alive.
+        try {
+            const res = await fetch(`/api/upload/urls?uploadId=${this.uploadId}&key=${encodeURIComponent(this.key)}&check=true`);
+            if (res.status === 404) {
+                console.warn("⚠️ Upload session expired on server. Starting fresh.");
+                await this.clearSession();
+                this.uploadId = "";
+                this.parts = [];
+                this.uploadedBytes = 0;
+            }
+        } catch (e) {
+            console.error("Sync failed, continuing with local state.");
+        }
+    }
+
     public getProgress(): UploadProgress {
+        const percent = this.file.size > 0 ? Math.round((this.uploadedBytes / this.file.size) * 100) : 0;
         return {
-            percent: this.file.size > 0 ? Math.round((this.uploadedBytes / this.file.size) * 100) : 0,
+            // Instant feel: show at least 1% if we've started but bytes are 0
+            percent: (this.status === "uploading" && percent === 0) ? 1 : percent,
             uploadedBytes: this.uploadedBytes,
             totalBytes: this.file.size,
             status: this.status,
@@ -170,8 +200,8 @@ export class S3UploadManager {
         if (this.chunkTimings.length > 5) this.chunkTimings.shift();
 
         // If last 3 chunks were fast, increase concurrency
-        if (this.successiveSuccesses >= 3 && this.concurrency < 8) {
-            this.concurrency = Math.min(8, this.concurrency + 1);
+        if (this.successiveSuccesses >= 3 && this.concurrency < 12) {
+            this.concurrency = Math.min(12, this.concurrency + 1);
             console.log(`🚀 [ADAPTIVE] Speed good → Concurrency UP to ${this.concurrency}`);
         }
 
@@ -182,6 +212,15 @@ export class S3UploadManager {
         const eta = remaining / ((bytes / (avgMs / 1000)));
 
         this.emitProgress({ speedMbps: Math.round(speedMbps * 10) / 10, eta: Math.round(eta) });
+
+        // DYNAMIC CHUNK ADAPTATION (for new sessions)
+        // If we just finished the first few parts and speed is very high, 
+        // we can't change chunkSize for THIS uploadId (S3 rules), 
+        // but we can increase concurrency further.
+        if (this.parts.length === 3 && speedMbps > 50 && this.concurrency < 12) {
+            this.concurrency = 12;
+            console.log("🚀 [ADAPTIVE] Ultra-high speed detected → Maxing concurrency");
+        }
     }
 
     private onChunkFailure() {
@@ -196,22 +235,95 @@ export class S3UploadManager {
     }
 
     /**
-     * Promise Pool — proper worker queue (not simple Promise.all)
-     * Workers pick tasks from queue as they complete.
+     * DYNAMIC PROMISE POOL (Google-Level Parallelism)
+     * Does not use fixed workers at start. Instead, it reacts to 
+     * this.concurrency changes in real-time to scale up/down.
      */
-    private async promisePool(
+    private async dynamicPool(
         tasks: number[],
         worker: (partNumber: number) => Promise<void>
     ): Promise<void> {
         const queue = [...tasks];
-        const runWorker = async (): Promise<void> => {
-            while (queue.length > 0 && this.status === "uploading") {
-                const partNumber = queue.shift()!;
-                await worker(partNumber);
+        let activeWorkers = 0;
+
+        return new Promise((resolve, reject) => {
+            const spawnWorkers = () => {
+                if (this.status !== "uploading") return;
+                
+                if (queue.length === 0) {
+                    if (activeWorkers === 0) resolve();
+                    return;
+                }
+
+                while (this.activeWorkerCount < this.concurrency && queue.length > 0 && this.status === "uploading") {
+                    const partNumber = queue.shift()!;
+                    this.activeWorkerCount++;
+                    
+                    // Parallel Status Log
+                    console.log(`🚀 [PARALLEL] Active Workers: ${this.activeWorkerCount} / Target: ${this.concurrency}`);
+
+                    worker(partNumber).then(() => {
+                        this.activeWorkerCount--;
+                        spawnWorkers(); // Check for more work or scale up
+                    }).catch(err => {
+                        this.activeWorkerCount--;
+                        this.status = "error";
+                        reject(err);
+                    });
+                }
+            };
+
+            // Monitor concurrency changes and scale up if needed
+            const monitorInterval = setInterval(() => {
+                if (this.status !== "uploading") {
+                    clearInterval(monitorInterval);
+                    return;
+                }
+                if (this.activeWorkerCount < this.concurrency && queue.length > 0) {
+                    spawnWorkers();
+                }
+                if (queue.length === 0 && this.activeWorkerCount === 0) {
+                    clearInterval(monitorInterval);
+                    resolve();
+                }
+            }, 500);
+
+            spawnWorkers();
+        });
+    }
+
+    /**
+     * SINGLETON BATCH PREFETCHER
+     * Prevents race conditions where multiple parallel workers 
+     * request URLs for the same parts simultaneously.
+     */
+    private async prefetchUrls(startPart: number, remaining: number[], totalParts: number, urlCache: Map<number, string>) {
+        if (this.prefetchPromise) return this.prefetchPromise;
+
+        this.prefetchPromise = (async () => {
+            try {
+                this.emitProgress({ message: "Fetching secure upload URLs..." });
+                const batch = Array.from(
+                    { length: Math.min(this.concurrency * 3, remaining.length) },
+                    (_, i) => remaining[i]
+                ).filter(n => n <= totalParts && !urlCache.has(n));
+
+                if (batch.length === 0) return;
+
+                const res = await fetch("/api/upload/urls", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ key: this.key, uploadId: this.uploadId, partNumbers: batch }),
+                });
+                const { urls, error } = await res.json();
+                if (error) throw new Error(error);
+                urls.forEach((u: any) => urlCache.set(u.partNumber, u.url));
+            } finally {
+                this.prefetchPromise = null;
             }
-        };
-        const workers = Array.from({ length: this.concurrency }, runWorker);
-        await Promise.all(workers);
+        })();
+
+        return this.prefetchPromise;
     }
 
     async start(metadata: any): Promise<any> {
@@ -219,11 +331,14 @@ export class S3UploadManager {
 
         // 🚀 INSTANT FEEL: Emit progress immediately
         this.status = "uploading";
-        this.emitProgress();
+        this.emitProgress({ message: "Initializing upload pipeline..." });
 
-        // Try to resume from IndexedDB first
+        // Try to resume and SYNC state
         if (!this.uploadId) {
             await this.loadSession();
+            if (this.uploadId) {
+                await this.syncSessionState();
+            }
         }
 
         try {
@@ -242,14 +357,27 @@ export class S3UploadManager {
                 if (error) throw new Error(error);
                 this.uploadId = uploadId;
                 this.key = key;
+                
+                // Adaptive Production Logic
+                const isMock = this.uploadId.startsWith("mock-");
+                if (isMock) {
+                    console.warn("⚠️ [MOCK MODE] Using 4MB chunks for Vercel compatibility.");
+                    this.chunkSize = 4 * 1024 * 1024;
+                    this.concurrency = 2;
+                } else {
+                    const config = getChunkConfig(20);
+                    this.chunkSize = config.chunkSize;
+                    this.concurrency = config.concurrency;
+                }
+
                 await this.saveSession();
             }
 
             this.status = "uploading";
             this.abortController = new AbortController();
 
-            // 2. Build remaining parts list
             const totalParts = Math.ceil(this.file.size / this.chunkSize);
+            this.emitProgress({ message: `Preparing ${totalParts} chunks...` });
             const done = new Set(this.parts.map(p => p.PartNumber));
             const remaining = Array.from({ length: totalParts }, (_, i) => i + 1)
                 .filter(n => !done.has(n));
@@ -257,40 +385,21 @@ export class S3UploadManager {
             // 3. URL cache for batch fetching
             const urlCache = new Map<number, string>();
 
-            const prefetchUrls = async (startPart: number) => {
-                const batch = Array.from(
-                    { length: Math.min(this.concurrency * 2, remaining.length) },
-                    (_, i) => startPart + i
-                ).filter(n => n <= totalParts && !urlCache.has(n));
-
-                if (batch.length === 0) return;
-
-                const res = await fetch("/api/upload/urls", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ key: this.key, uploadId: this.uploadId, partNumbers: batch }),
-                });
-                const { urls, error } = await res.json();
-                if (error) throw new Error(error);
-                urls.forEach((u: any) => urlCache.set(u.partNumber, u.url));
-            };
-
-            // Prefetch first batch immediately
-            if (remaining.length > 0) await prefetchUrls(remaining[0]);
-
-            // 4. Upload via Promise Pool
-            await this.promisePool(remaining, async (partNumber) => {
+            // 4. Upload via Dynamic Pool
+            await this.dynamicPool(remaining, async (partNumber) => {
                 if (!urlCache.has(partNumber)) {
-                    await prefetchUrls(partNumber);
+                    await this.prefetchUrls(partNumber, remaining, totalParts, urlCache);
                 }
                 const url = urlCache.get(partNumber)!;
                 urlCache.delete(partNumber);
+                this.emitProgress({ message: `Uploading chunk ${partNumber}...` });
                 await this.uploadPart(partNumber, url);
             });
 
             if (this.status !== "uploading") return;
 
             // 5. Complete
+            this.emitProgress({ message: "Finalizing and saving video..." });
             const completeRes = await fetch("/api/upload/complete", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -327,6 +436,8 @@ export class S3UploadManager {
         const blob = this.file.slice(start, end);
         const startTime = Date.now();
 
+        console.log("Uploading chunk:", partNumber);
+
         try {
             const res = await fetch(url, {
                 method: "PUT",
@@ -334,19 +445,42 @@ export class S3UploadManager {
                 signal: this.abortController?.signal,
             });
 
-            if (!res.ok) throw new Error(`Part ${partNumber} failed: HTTP ${res.status}`);
+            if (!res.ok) {
+                if (res.status === 413) {
+                    throw new Error("FATAL_ERROR: Chunk size too large for server (413). Try setting MOCK_MODE=false or reducing chunkSize.");
+                }
+                if (res.status === 403) {
+                    throw new Error("FATAL_ERROR: S3 Forbidden (403). Check your AWS Keys and Signature logic.");
+                }
+                throw new Error(`Part ${partNumber} failed: HTTP ${res.status}`);
+            }
 
             const etag = res.headers.get("ETag");
-            if (!etag) throw new Error(`No ETag for part ${partNumber}`);
+            if (!etag) {
+                // If status is OK but ETag is missing, it's 99% a CORS Exposure issue
+                if (res.ok) {
+                    throw new Error("CORS_EXPOSURE_ERROR: ETag header is hidden. Add 'ExposedHeaders': ['ETag'] to S3 CORS policy.");
+                }
+                throw new Error(`Part ${partNumber} failed: HTTP ${res.status}`);
+            }
 
             this.parts.push({ PartNumber: partNumber, ETag: etag.replace(/"/g, "") });
             this.uploadedBytes += (end - start);
 
             await this.saveSession();
+            console.log("Success:", partNumber);
             this.onChunkSuccess(Date.now() - startTime, end - start);
-
         } catch (err: any) {
             if (err.name === "AbortError") return;
+
+            console.log("Fail:", partNumber, err.message);
+
+            // Detect CORS / Network errors that don't have a status code
+            if (err.message === "Failed to fetch" || err.name === "TypeError") {
+                this.status = "error";
+                this.emitProgress();
+                throw new Error("CORS_OR_NETWORK_ERROR: Browser blocked the request. Check S3 CORS policy or internet.");
+            }
 
             this.onChunkFailure();
 

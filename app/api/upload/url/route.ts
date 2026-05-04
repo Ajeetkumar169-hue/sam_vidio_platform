@@ -1,7 +1,8 @@
+export const runtime = 'edge';
 import { NextRequest, NextResponse } from "next/server";
 import { UploadPartCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { s3Client, BUCKET_NAME, MOCK_MODE } from "@/lib/s3-client";
+import { s3AccelClient, BUCKET_NAME, MOCK_MODE } from "@/lib/s3-client";
 import { getCurrentUser } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
@@ -30,8 +31,8 @@ export async function POST(req: NextRequest) {
             PartNumber: partNumber,
         });
 
-        // URL expires in 15 minutes
-        const url = await getSignedUrl(s3Client, command, { expiresIn: 900 });
+        // URL expires in 24 hours to prevent failures on slow connections
+        const url = await getSignedUrl(s3AccelClient, command, { expiresIn: 86400 });
 
         return NextResponse.json({ url });
     } catch (error: any) {

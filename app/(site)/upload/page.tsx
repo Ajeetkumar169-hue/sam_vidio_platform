@@ -66,6 +66,7 @@ export default function UploadPage() {
   const [uploadedVideo, setUploadedVideo] = useState<any>(null)
   const [speedMbps, setSpeedMbps] = useState<number>(0)
   const [eta, setEta] = useState<number>(0)
+  const [uploadMessage, setUploadMessage] = useState<string>("")
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -84,6 +85,7 @@ export default function UploadPage() {
           setStatus(p.status)
           if (p.speedMbps) setSpeedMbps(p.speedMbps)
           if (p.eta) setEta(p.eta)
+          if (p.message) setUploadMessage(p.message)
       })
       setUploadManager(manager)
 
@@ -589,6 +591,12 @@ export default function UploadPage() {
                         <Progress value={progress} className="h-3 rounded-full bg-secondary overflow-hidden">
                            <div className="h-full bg-primary transition-all duration-300" style={{ width: `${progress}%` }} />
                         </Progress>
+
+                        {uploadMessage && (
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest text-center animate-pulse">
+                                {uploadMessage}
+                            </p>
+                        )}
                         
                         <div className="flex gap-2">
                             {status === "uploading" && (

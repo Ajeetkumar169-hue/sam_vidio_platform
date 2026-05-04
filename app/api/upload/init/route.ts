@@ -1,3 +1,4 @@
+export const runtime = 'edge';
 import { NextRequest, NextResponse } from "next/server";
 import { CreateMultipartUploadCommand } from "@aws-sdk/client-s3";
 import { s3Client, BUCKET_NAME, MOCK_MODE } from "@/lib/s3-client";
@@ -43,6 +44,8 @@ export async function POST(req: NextRequest) {
             Key: key,
             ContentType: contentType,
         });
+
+        console.log(`📁 [S3 INIT] Initializing session. Bucket: ${BUCKET_NAME}, Region: ${process.env.AWS_REGION || "us-east-1"}`);
 
         const response = await s3Client.send(command);
 
