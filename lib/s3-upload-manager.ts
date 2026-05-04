@@ -208,12 +208,37 @@ export class S3UploadManager {
         if (remainingPartNumbers.length === 0) return;
 
         this.abortController = new AbortController();
+        const urlCache = new Map<number, string>();
+
+        const fetchBatchUrls = async (partNumbers: number[]) => {
+            const res = await fetch("/api/upload/urls", {
+                method: "POST",
+                body: JSON.stringify({
+                    key: this.key,
+                    uploadId: this.uploadId,
+                    partNumbers
+                })
+            });
+            const { urls, error } = await res.json();
+            if (error) throw new Error(error);
+            urls.forEach((u: any) => urlCache.set(u.partNumber, u.url));
+        };
 
         const uploadNext = async (): Promise<void> => {
             if (remainingPartNumbers.length === 0 || this.status !== "uploading") return;
 
             const partNumber = remainingPartNumbers.shift()!;
-            await this.uploadPart(partNumber);
+            
+            // If URL not in cache, fetch a new batch
+            if (!urlCache.has(partNumber)) {
+                const batch = [partNumber, ...remainingPartNumbers.slice(0, 9)];
+                await fetchBatchUrls(batch);
+            }
+
+            const url = urlCache.get(partNumber)!;
+            urlCache.delete(partNumber);
+
+            await this.uploadPart(partNumber, url);
             return uploadNext();
         };
 
@@ -221,23 +246,12 @@ export class S3UploadManager {
         await Promise.all(workers);
     }
 
-    private async uploadPart(partNumber: number): Promise<void> {
+    private async uploadPart(partNumber: number, url: string): Promise<void> {
         const start = (partNumber - 1) * this.adaptiveChunkSize;
         const end = Math.min(start + this.adaptiveChunkSize, this.file.size);
         const blob = this.file.slice(start, end);
 
         try {
-            const urlRes = await fetch("/api/upload/url", {
-                method: "POST",
-                body: JSON.stringify({
-                    key: this.key,
-                    uploadId: this.uploadId,
-                    partNumber: partNumber,
-                }),
-            });
-            const { url, error } = await urlRes.json();
-            if (error) throw new Error(error);
-
             const res = await fetch(url, {
                 method: "PUT",
                 body: blob,
@@ -266,7 +280,7 @@ export class S3UploadManager {
                 // Exponential backoff
                 const delay = Math.pow(2, retries) * 1000;
                 await new Promise(r => setTimeout(() => r(undefined), delay));
-                return this.uploadPart(partNumber);
+                return this.uploadPart(partNumber, url);
             } else {
                 this.status = "error";
                 throw err;
