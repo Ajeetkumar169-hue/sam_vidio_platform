@@ -17,11 +17,14 @@ export interface IVideo {
   views: number
   likes: number
   dislikes: number
-  status: "pending" | "approved" | "rejected"
+  status: "pending" | "processing" | "ready" | "failed" | "approved" | "rejected"
   visibility: "public" | "private" | "unlisted"
   storageSize?: number
   filePublicId?: string
   duration?: number
+  processingProgress?: number
+  qualities?: Array<{ label: string; url: string; size?: number }>
+  storageType?: "cloudinary" | "s3" | "link"
   uploadId?: string // Idempotency key
   isDeleted?: boolean // Future-proofing
   channelName?: string
@@ -43,11 +46,20 @@ const VideoSchema = new Schema<IVideo>(
     views: { type: Number, default: 0 },
     likes: { type: Number, default: 0 },
     dislikes: { type: Number, default: 0 },
-    status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
+    status: { type: String, enum: ["pending", "processing", "ready", "failed", "approved", "rejected"], default: "pending" },
     visibility: { type: String, enum: ["public", "private", "unlisted"], default: "public" },
     storageSize: { type: Number, default: 0 },
     filePublicId: { type: String },
-    duration: { type: Number },
+    duration: { type: Number, default: 0 },
+    processingProgress: { type: Number, default: 0 },
+    qualities: [
+        {
+            label: { type: String }, // e.g. "1080p", "720p"
+            url: { type: String },
+            size: { type: Number }
+        }
+    ],
+    storageType: { type: String, enum: ["cloudinary", "s3", "link"], default: "s3" },
     uploadId: { type: String, unique: true, sparse: true },
     isDeleted: { type: Boolean, default: false },
     channelName: { type: String },

@@ -44,6 +44,8 @@ interface DashboardData {
     visibility: string
     createdAt: string
     category?: { name: string }
+    status: string
+    processingProgress?: number
   }[]
   stats: {
     totalVideos: number
@@ -225,7 +227,11 @@ export default function DashboardPage() {
                       </Link>
                       <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
                         <span>{video.views} views</span>
-                        <span>{video.likes} likes</span>
+                        {video.status !== "ready" && video.status !== "approved" && (
+                          <Badge variant={video.status === "failed" ? "destructive" : "secondary"} className="text-[10px] animate-pulse">
+                            {video.status === "processing" ? `Processing ${video.processingProgress || 0}%` : video.status}
+                          </Badge>
+                        )}
                         <Badge variant="outline" className="text-xs">
                           {video.visibility}
                         </Badge>

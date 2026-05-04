@@ -3,22 +3,34 @@
 import { useState, useEffect } from "react"
 import { Loader2, AlertCircle } from "lucide-react"
 
+interface Quality {
+  label: string
+  url: string
+}
+
 interface VideoPlayerProps {
   url: string
   poster?: string
   className?: string
+  qualities?: Quality[]
 }
 
-export function VideoPlayer({ url, poster, className = "" }: VideoPlayerProps) {
+export function VideoPlayer({ url, poster, className = "", qualities = [] }: VideoPlayerProps) {
   const [playerType, setPlayerType] = useState<"video" | "iframe" | "unknown">("unknown")
   const [embedUrl, setEmbedUrl] = useState<string>("")
   const [error, setError] = useState<string | null>(null)
+  const [currentUrl, setCurrentUrl] = useState(url)
+  const [currentQuality, setCurrentQuality] = useState("Auto")
 
   useEffect(() => {
-    if (!url) return
+    setCurrentUrl(url)
+  }, [url])
+
+  useEffect(() => {
+    if (!currentUrl) return
 
     // 1. Check if it's a direct video link
-    const isDirectVideo = url.match(/\.(mp4|webm|ogg|mov|m4v)$|^(\/uploads\/)/i)
+    const isDirectVideo = currentUrl.match(/\.(mp4|webm|ogg|mov|m4v)$|^(\/uploads\/)/i)
     
     if (isDirectVideo) {
       setPlayerType("video")
@@ -26,7 +38,7 @@ export function VideoPlayer({ url, poster, className = "" }: VideoPlayerProps) {
     }
 
     // 2. Handle YouTube
-    const ytMatch = url.match(/(?:\?v=|&v=|youtu\.be\/|\/embed\/|\/v\/|youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/)
+    const ytMatch = currentUrl.match(/(?:\?v=|&v=|youtu\.be\/|\/embed\/|\/v\/|youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/)
     if (ytMatch) {
       setPlayerType("iframe")
       setEmbedUrl(`https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1`)
@@ -34,8 +46,7 @@ export function VideoPlayer({ url, poster, className = "" }: VideoPlayerProps) {
     }
 
     // 3. Handle xHamster
-    // Pattern: https://xhamster.com/videos/slug-id
-    const xhMatch = url.match(/xhamster\.com\/videos\/.*-([a-zA-Z0-9]+)/)
+    const xhMatch = currentUrl.match(/xhamster\.com\/videos\/.*-([a-zA-Z0-9]+)/)
     if (xhMatch) {
       setPlayerType("iframe")
       setEmbedUrl(`https://xhamster.com/embed/${xhMatch[1]}`)
@@ -43,7 +54,7 @@ export function VideoPlayer({ url, poster, className = "" }: VideoPlayerProps) {
     }
 
     // 4. Handle Pornhub
-    const phMatch = url.match(/pornhub\.com\/view_video\.php\?viewkey=([a-zA-Z0-9]+)/)
+    const phMatch = currentUrl.match(/pornhub\.com\/view_video\.php\?viewkey=([a-zA-Z0-9]+)/)
     if (phMatch) {
       setPlayerType("iframe")
       setEmbedUrl(`https://www.pornhub.com/embed/${phMatch[1]}`)
@@ -51,21 +62,19 @@ export function VideoPlayer({ url, poster, className = "" }: VideoPlayerProps) {
     }
 
     // 5. Handle Vimeo
-    const vmMatch = url.match(/vimeo\.com\/(?:video\/)?([0-9]+)/)
+    const vmMatch = currentUrl.match(/vimeo\.com\/(?:video\/)?([0-9]+)/)
     if (vmMatch) {
       setPlayerType("iframe")
       setEmbedUrl(`https://player.vimeo.com/video/${vmMatch[1]}?autoplay=1`)
       return
     }
 
-    // Fallback: If it's a link but not a recognized video file, try playing as video or show error
-    // For now, assume if it starts with http, it might be a direct link without extension
-    if (url.startsWith("http")) {
+    if (currentUrl.startsWith("http")) {
       setPlayerType("video")
     } else {
       setError("Unsupported video source")
     }
-  }, [url])
+  }, [currentUrl])
 
   if (error) {
     return (
@@ -101,16 +110,45 @@ export function VideoPlayer({ url, poster, className = "" }: VideoPlayerProps) {
   }
 
   return (
-    <video
-      src={url}
-      controls
-      className={`h-full w-full object-contain bg-black sm:rounded-lg ${className}`}
-      poster={poster}
-      playsInline
-      preload="metadata"
-    >
-      <track kind="captions" />
-      Your browser does not support the video tag.
-    </video>
+    <div className={`relative group h-full w-full bg-black sm:rounded-lg overflow-hidden ${className}`}>
+        <video
+          src={currentUrl}
+          controls
+          className="h-full w-full object-contain"
+          poster={poster}
+          playsInline
+          preload="metadata"
+        >
+          <track kind="captions" />
+          Your browser does not support the video tag.
+        </video>
+
+        {/* Quality Selector Overlay (YouTube Style) */}
+        {qualities.length > 0 && (
+            <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                <div className="flex flex-col gap-1 items-end">
+                    <div className="bg-black/80 backdrop-blur-md rounded-lg border border-white/10 p-1 flex flex-col min-w-[80px]">
+                        <span className="text-[10px] text-white/50 px-2 py-1 uppercase font-bold">Quality</span>
+                        {[{ label: "Auto", url: url }, ...qualities].map((q, i) => (
+                            <button
+                                key={i}
+                                onClick={() => {
+                                    setCurrentUrl(q.url)
+                                    setCurrentQuality(q.label)
+                                }}
+                                className={`text-[11px] px-3 py-1.5 rounded-md text-left transition-colors ${
+                                    currentQuality === q.label 
+                                    ? "bg-primary text-white font-bold" 
+                                    : "text-white/80 hover:bg-white/10"
+                                }`}
+                            >
+                                {q.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        )}
+    </div>
   )
 }

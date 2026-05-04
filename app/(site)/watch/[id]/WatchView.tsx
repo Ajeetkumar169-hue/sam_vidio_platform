@@ -45,6 +45,7 @@ interface VideoData {
     username: string
     avatar?: string
   }
+  qualities?: Array<{ label: string; url: string; size?: number }>
 }
 
 function formatNumber(n: number | null | undefined): string {
@@ -194,6 +195,7 @@ export function WatchView({ initialVideo }: WatchViewProps) {
             <VideoPlayer 
               url={video.videoUrl} 
               poster={video.thumbnailUrl} 
+              qualities={video.qualities}
             />
           </div>
 
