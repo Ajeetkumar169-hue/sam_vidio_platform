@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { s3Client, BUCKET_NAME } from "@/lib/s3-client";
+import { UploadPartCommand } from "@aws-sdk/client-s3";
+import { s3Client, BUCKET_NAME, MOCK_MODE } from "@/lib/s3-client";
 import { getCurrentUser } from "@/lib/auth";
 
 /**
  * BATCH PRESIGNED URL GENERATOR
  * Generates multiple signed URLs in a single round-trip to minimize latency.
+ * Handles both real S3 and MOCK_MODE gracefully.
  */
 export async function POST(req: NextRequest) {
     try {
@@ -19,18 +20,18 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Invalid parameters" }, { status: 400 });
         }
 
-        // Generate signatures in parallel
-        const urlPromises = partNumbers.map(async (partNumber: number) => {
-            const command = new PutObjectCommand({
-                Bucket: BUCKET_NAME,
-                Key: key,
-                // Note: For multipart upload, we need special parameters, 
-                // but standard PutObject signatures work for individual parts in many S3 configs
-                // In production S3, we use UploadPartCommand
-            });
+        // MOCK MODE: No real AWS. Return mock upload endpoint URLs per part.
+        if (MOCK_MODE || uploadId.startsWith("mock-")) {
+            const urls = partNumbers.map((partNumber: number) => ({
+                partNumber,
+                url: `/api/upload/mock?uploadId=${uploadId}&key=${encodeURIComponent(key)}&partNumber=${partNumber}`
+            }));
+            return NextResponse.json({ urls });
+        }
 
-            // Using standard S3 Multipart URL generation logic
-            const url = await getSignedUrl(s3Client, new (await import("@aws-sdk/client-s3")).UploadPartCommand({
+        // REAL S3: Generate presigned URLs in parallel for maximum performance
+        const urlPromises = partNumbers.map(async (partNumber: number) => {
+            const url = await getSignedUrl(s3Client, new UploadPartCommand({
                 Bucket: BUCKET_NAME,
                 Key: key,
                 UploadId: uploadId,

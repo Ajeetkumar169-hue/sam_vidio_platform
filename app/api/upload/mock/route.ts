@@ -12,20 +12,26 @@ export async function PUT(req: NextRequest) {
             return NextResponse.json({ error: "Missing upload identifier" }, { status: 400 });
         }
 
-        const buffer = Buffer.from(await req.arrayBuffer());
-        
-        // Define temp directory for this upload
-        const tempDir = path.join(process.cwd(), "public", "uploads", ".temp", uploadId);
-        if (!fs.existsSync(tempDir)) {
-            fs.mkdirSync(tempDir, { recursive: true });
+        // On Vercel (serverless), filesystem is read-only.
+        // We store parts in memory/skip disk write - just ack the chunk.
+        const isVercel = !!process.env.VERCEL;
+
+        if (!isVercel) {
+            // Local dev: save chunks to disk for real assembly later
+            const buffer = Buffer.from(await req.arrayBuffer());
+            const tempDir = path.join(process.cwd(), "public", "uploads", ".temp", uploadId);
+            if (!fs.existsSync(tempDir)) {
+                fs.mkdirSync(tempDir, { recursive: true });
+            }
+            const partPath = path.join(tempDir, `${partNumber}.part`);
+            fs.writeFileSync(partPath, buffer);
+            console.log(`📁 [MOCK S3] Part ${partNumber} saved locally for ${uploadId} (${buffer.length} bytes)`);
+        } else {
+            // Vercel: consume the stream to prevent hanging, then ack
+            await req.arrayBuffer();
+            console.log(`☁️ [MOCK S3/Vercel] Part ${partNumber} acknowledged for ${uploadId}`);
         }
 
-        const partPath = path.join(tempDir, `${partNumber}.part`);
-        fs.writeFileSync(partPath, buffer);
-
-        console.log(`📁 [MOCK S3] Part ${partNumber} received for ${uploadId} (${buffer.length} bytes)`);
-
-        // S3 expects an ETag header in the response
         return new NextResponse(null, {
             status: 200,
             headers: {
