@@ -259,16 +259,35 @@ export class S3UploadManager {
                     const partNumber = queue.shift()!;
                     this.activeWorkerCount++;
                     
-                    // Parallel Status Log
                     console.log(`🚀 [PARALLEL] Active Workers: ${this.activeWorkerCount} / Target: ${this.concurrency}`);
 
                     worker(partNumber).then(() => {
                         this.activeWorkerCount--;
-                        spawnWorkers(); // Check for more work or scale up
-                    }).catch(err => {
-                        this.activeWorkerCount--;
-                        this.status = "error";
-                        reject(err);
+                        spawnWorkers(); 
+                    }).catch(async (err: any) => {
+                        this.activeWorkerCount--; // Instant slot release!
+
+                        const retries = this.retriesMap.get(partNumber) || 0;
+                        if (retries < 5 && this.status === "uploading") {
+                            this.retriesMap.set(partNumber, retries + 1);
+                            const msg = `⚠️ Chunk ${partNumber} failed. Re-queuing (Attempt ${retries + 1}/5)...`;
+                            this.emitProgress({ message: msg });
+                            console.warn(msg);
+
+                            // Wait in background, then re-inject into queue
+                            setTimeout(() => {
+                                if (this.status === "uploading") {
+                                    queue.push(partNumber);
+                                    spawnWorkers();
+                                }
+                            }, Math.pow(2, retries) * 1000);
+
+                            // Pick up a fresh chunk while this one waits
+                            spawnWorkers();
+                        } else {
+                            this.status = "error";
+                            reject(err);
+                        }
                     });
                 }
             };
@@ -398,25 +417,43 @@ export class S3UploadManager {
 
             if (this.status !== "uploading") return;
 
-            // 5. Complete
-            this.emitProgress({ message: "Finalizing and saving video..." });
-            const completeRes = await fetch("/api/upload/complete", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    uploadId: this.uploadId,
-                    key: this.key,
-                    parts: this.parts.sort((a, b) => a.PartNumber - b.PartNumber),
-                    metadata: { ...metadata, fileSize: this.file.size },
-                }),
-            });
-            const final = await completeRes.json();
-            if (final.error) throw new Error(final.error);
+            // 5. Complete with Retry Logic
+            const totalPartsCount = Math.ceil(this.file.size / this.chunkSize);
+            if (this.parts.length < totalPartsCount) {
+                throw new Error(`PIPELINE_ERROR: Missing ${totalPartsCount - this.parts.length} chunks. Cannot complete.`);
+            }
 
-            this.status = "complete";
-            this.emitProgress();
-            await this.clearSession();
-            return final;
+            let completeRetries = 0;
+            const finalParts = [...this.parts].sort((a, b) => a.PartNumber - b.PartNumber);
+
+            while (completeRetries < 3) {
+                try {
+                    this.emitProgress({ message: `Finalizing video (Attempt ${completeRetries + 1}/3)...` });
+                    const completeRes = await fetch("/api/upload/complete", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            uploadId: this.uploadId,
+                            key: this.key,
+                            parts: finalParts,
+                            metadata: { ...metadata, fileSize: this.file.size },
+                        }),
+                    });
+
+                    const final = await completeRes.json();
+                    if (final.error) throw new Error(final.error);
+
+                    this.status = "complete";
+                    this.emitProgress({ message: "Upload Successful! 🎉" });
+                    await this.clearSession();
+                    return final;
+                } catch (err: any) {
+                    completeRetries++;
+                    if (completeRetries >= 3) throw err;
+                    console.warn(`🔄 Completion failed. Retrying ${completeRetries}/3...`, err);
+                    await new Promise(r => setTimeout(r, 2000 * completeRetries));
+                }
+            }
 
         } catch (err: any) {
             if (err.name === "AbortError") {
@@ -477,24 +514,13 @@ export class S3UploadManager {
 
             // Detect CORS / Network errors that don't have a status code
             if (err.message === "Failed to fetch" || err.name === "TypeError") {
-                this.status = "error";
-                this.emitProgress();
                 throw new Error("CORS_OR_NETWORK_ERROR: Browser blocked the request. Check S3 CORS policy or internet.");
             }
 
             this.onChunkFailure();
-
-            const retries = this.retriesMap.get(partNumber) || 0;
-            if (retries < 5) {
-                this.retriesMap.set(partNumber, retries + 1);
-                // Exponential backoff + jitter (Google-style)
-                const jitter = Math.random() * 1000;
-                const delay = Math.pow(2, retries) * 1000 + jitter;
-                await new Promise(r => setTimeout(r, delay));
-                return this.uploadPart(partNumber, url);
-            }
             throw err;
         }
+    }
     }
 
     pause() {
