@@ -16,7 +16,7 @@ export interface UploadProgress {
 }
 
 const MIN_CHUNK_SIZE = 5 * 1024 * 1024; // 5MB minimum for S3 multipart
-const MAX_CONCURRENT = 6; // Increased from 3 for faster speed
+const DEFAULT_CONCURRENT = 3;
 
 export class S3UploadManager {
     private file: File;
@@ -28,6 +28,11 @@ export class S3UploadManager {
     private uploadedBytes: number = 0;
     private abortController: AbortController | null = null;
     private retriesMap: Map<number, number> = new Map();
+    
+    // Adaptive config
+    private speedMbps: number = 0;
+    private adaptiveConcurrency: number = DEFAULT_CONCURRENT;
+    private adaptiveChunkSize: number = MIN_CHUNK_SIZE;
 
     constructor(file: File, progressCallback: (p: UploadProgress) => void) {
         this.file = file;
@@ -35,9 +40,54 @@ export class S3UploadManager {
         this.loadSession();
     }
 
-    private get CHUNK_SIZE() {
-        // Ensure max parts is ~9000 (below S3 10,000 part limit)
-        return Math.max(MIN_CHUNK_SIZE, Math.ceil(this.file.size / 9000));
+    /**
+     * Detects upload speed by sending a small 256KB probe to the server
+     */
+    private async detectSpeed(): Promise<number> {
+        try {
+            const probeSize = 256 * 1024; // 256KB probe
+            const probeData = new Uint8Array(probeSize);
+            const start = performance.now();
+            
+            const res = await fetch("/api/upload/speed-test", {
+                method: "POST",
+                body: probeData,
+            });
+            
+            if (!res.ok) return 5; // Fallback to 5Mbps
+
+            const end = performance.now();
+            const durationSec = (end - start) / 1000;
+            const bits = probeSize * 8;
+            const mbps = (bits / durationSec) / 1000000;
+            
+            this.speedMbps = mbps;
+            this.adjustConfig(mbps);
+            console.log(`🚀 Detected Speed: ${mbps.toFixed(2)} Mbps`);
+            return mbps;
+        } catch {
+            return 5; // Fallback
+        }
+    }
+
+    private adjustConfig(mbps: number) {
+        if (mbps < 2) {
+            this.adaptiveConcurrency = 1;
+            this.adaptiveChunkSize = 5 * 1024 * 1024; // 5MB
+        } else if (mbps < 10) {
+            this.adaptiveConcurrency = 2;
+            this.adaptiveChunkSize = 5 * 1024 * 1024; // 5MB
+        } else if (mbps < 50) {
+            this.adaptiveConcurrency = 4;
+            this.adaptiveChunkSize = 10 * 1024 * 1024; // 10MB
+        } else {
+            this.adaptiveConcurrency = 8;
+            this.adaptiveChunkSize = 20 * 1024 * 1024; // 20MB
+        }
+        
+        // Ensure we don't exceed S3 10,000 parts limit
+        const maxPartsSafeSize = Math.ceil(this.file.size / 9000);
+        this.adaptiveChunkSize = Math.max(this.adaptiveChunkSize, maxPartsSafeSize);
     }
 
     private getStorageKey() {
@@ -93,6 +143,9 @@ export class S3UploadManager {
             this.status = "uploading";
             this.updateProgress();
 
+            // 0. Detect Speed for adaptive configuration
+            await this.detectSpeed();
+
             // 1. Initialize Upload if no session exists or if it was invalidated
             if (!this.uploadId) {
                 const initRes = await fetch("/api/upload/init", {
@@ -147,7 +200,7 @@ export class S3UploadManager {
     }
 
     private async uploadAllParts() {
-        const totalParts = Math.ceil(this.file.size / this.CHUNK_SIZE);
+        const totalParts = Math.ceil(this.file.size / this.adaptiveChunkSize);
         const completedPartNumbers = new Set(this.parts.map(p => p.PartNumber));
         const remainingPartNumbers = Array.from({ length: totalParts }, (_, i) => i + 1)
             .filter(n => !completedPartNumbers.has(n));
@@ -164,13 +217,13 @@ export class S3UploadManager {
             return uploadNext();
         };
 
-        const workers = Array.from({ length: Math.min(MAX_CONCURRENT, remainingPartNumbers.length) }, () => uploadNext());
+        const workers = Array.from({ length: Math.min(this.adaptiveConcurrency, remainingPartNumbers.length) }, () => uploadNext());
         await Promise.all(workers);
     }
 
     private async uploadPart(partNumber: number): Promise<void> {
-        const start = (partNumber - 1) * this.CHUNK_SIZE;
-        const end = Math.min(start + this.CHUNK_SIZE, this.file.size);
+        const start = (partNumber - 1) * this.adaptiveChunkSize;
+        const end = Math.min(start + this.adaptiveChunkSize, this.file.size);
         const blob = this.file.slice(start, end);
 
         try {
