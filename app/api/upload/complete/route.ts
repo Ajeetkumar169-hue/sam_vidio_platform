@@ -103,7 +103,8 @@ export async function POST(req: NextRequest) {
                 category: metadata.categoryId || null,
                 tags: metadata.tags || [],
                 visibility: metadata.visibility || "public",
-                status: "approved",
+                status: "processing", // SaaS Level: Trigger Transcoding Pipeline
+                processingProgress: 10,
                 filePublicId: key,
                 storageSize: metadata.fileSize || 0,
                 uploadId: uploadId
@@ -132,6 +133,12 @@ export async function POST(req: NextRequest) {
 
             return videoResult.value;
         });
+
+        // 🎬 SaaS Upgrade: Trigger Mock Transcoding Pipeline
+        if (result && result._id) {
+            const { simulateTranscoding } = await import("@/lib/transcoder");
+            simulateTranscoding(result._id.toString());
+        }
 
         return NextResponse.json({ success: true, video: result });
     } catch (error: any) {
