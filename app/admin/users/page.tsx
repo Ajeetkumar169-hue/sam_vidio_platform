@@ -12,6 +12,7 @@ import {
     TableRow
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "sonner"
 import { Shield, ShieldAlert, UserX, UserCheck, Search, Trash2, Eye } from "lucide-react"
 import {
@@ -50,6 +51,7 @@ export default function AdminUsers() {
     const [mounted, setMounted] = useState(false)
     const [selectedUser, setSelectedUser] = useState<any>(null)
     const [isDetailOpen, setIsDetailOpen] = useState(false)
+    const [selectedIds, setSelectedIds] = useState<string[]>([])
 
     const fetchUsers = async () => {
         setLoading(true)
@@ -67,6 +69,7 @@ export default function AdminUsers() {
 
     useEffect(() => {
         setPage(1) // Reset to page 1 heavily on search
+        setSelectedIds([]) // Reset selections
     }, [search])
 
     useEffect(() => {
@@ -112,6 +115,41 @@ export default function AdminUsers() {
         }
     }
 
+    const handleBulkDelete = async () => {
+        if (selectedIds.length === 0) return
+        if (!confirm(`Are you sure you want to delete ${selectedIds.length} users? This will permanently delete their channels and all uploaded videos.`)) return
+        try {
+            const res = await fetch("/api/admin/users", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userIds: selectedIds }),
+            })
+            if (!res.ok) {
+                const data = await res.json()
+                throw new Error(data.error || "Failed to delete users")
+            }
+            toast.success(`${selectedIds.length} users deleted successfully`)
+            setSelectedIds([])
+            fetchUsers()
+        } catch (error: any) {
+            toast.error(error.message || "Failed to delete users")
+        }
+    }
+
+    const toggleSelectAll = () => {
+        if (selectedIds.length === users.length) {
+            setSelectedIds([])
+        } else {
+            setSelectedIds(users.map(u => u._id))
+        }
+    }
+
+    const toggleSelect = (id: string) => {
+        setSelectedIds(prev => 
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        )
+    }
+
     const calculateAge = (dobString: string) => {
         if (!dobString) return "N/A"
         const dob = new Date(dobString)
@@ -147,10 +185,26 @@ export default function AdminUsers() {
                 </div>
             </div>
 
+            {/* Bulk Actions */}
+            {selectedIds.length > 0 && (
+                <div className="flex flex-wrap gap-2 items-center bg-muted/50 p-3 rounded-lg border">
+                    <span className="text-sm font-medium mr-2">{selectedIds.length} users selected</span>
+                    <Button size="sm" variant="destructive" onClick={handleBulkDelete}>
+                        <Trash2 className="h-4 w-4 mr-2" /> Delete Selected Users
+                    </Button>
+                </div>
+            )}
+
             <div className="border rounded-lg bg-card text-card-foreground overflow-x-auto platinum-scrollbar pb-6">
                 <Table>
                     <TableHeader>
                         <TableRow>
+                            <TableHead className="w-12 text-center">
+                                <Checkbox 
+                                    checked={users.length > 0 && selectedIds.length === users.length}
+                                    onCheckedChange={toggleSelectAll}
+                                />
+                            </TableHead>
                             <TableHead>User</TableHead>
                             <TableHead>Role</TableHead>
                             <TableHead>Status</TableHead>
@@ -162,7 +216,13 @@ export default function AdminUsers() {
                         {loading ? (
                             <TableRow><TableCell colSpan={5} className="text-center py-8">Loading users...</TableCell></TableRow>
                         ) : users.map((user) => (
-                            <TableRow key={user._id}>
+                            <TableRow key={user._id} className={selectedIds.includes(user._id) ? "bg-muted/30" : ""}>
+                                <TableCell className="text-center">
+                                    <Checkbox 
+                                        checked={selectedIds.includes(user._id)}
+                                        onCheckedChange={() => toggleSelect(user._id)}
+                                    />
+                                </TableCell>
                                 <TableCell>
                                     <div className="flex items-center gap-3">
                                         <div className="relative h-9 w-9 overflow-hidden rounded-full bg-primary/10 border border-white/5 flex items-center justify-center font-bold text-primary shadow-inner">

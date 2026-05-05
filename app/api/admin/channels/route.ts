@@ -47,23 +47,21 @@ export async function DELETE(req: NextRequest) {
     }
 
     await connectDB()
-    const { channelId, deleteVideos } = await req.json()
+    const { channelId, channelIds, deleteVideos } = await req.json()
+    const ids = channelIds || (channelId ? [channelId] : [])
 
-    if (!channelId) {
-      return NextResponse.json({ error: "Channel ID required" }, { status: 400 })
+    if (ids.length === 0) {
+      return NextResponse.json({ error: "No channel IDs provided" }, { status: 400 })
     }
 
-    const channel = await Channel.findById(channelId)
-    if (!channel) return NextResponse.json({ error: "Channel not found" }, { status: 404 })
-
-    // If indicated, also delete all videos referencing this channel
+    // If indicated, also delete all videos referencing these channels
     if (deleteVideos) {
-      await Video.deleteMany({ channel: channelId })
+      await Video.deleteMany({ channel: { $in: ids } })
     }
 
-    await Channel.findByIdAndDelete(channelId)
+    await Channel.deleteMany({ _id: { $in: ids } })
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, deleted: ids.length })
   } catch (error: any) {
     console.error("Admin channel delete error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

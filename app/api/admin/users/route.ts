@@ -51,14 +51,19 @@ export async function PUT(req: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
-        const { userId, role, status } = await req.json()
-        const user = await User.findByIdAndUpdate(
-            userId,
-            { ...(role && { role }), ...(status && { status }) },
-            { new: true }
+        const { userId, userIds, role, status } = await req.json()
+        const ids = userIds || (userId ? [userId] : [])
+        
+        if (ids.length === 0) {
+            return NextResponse.json({ error: "No user IDs provided" }, { status: 400 })
+        }
+
+        const result = await User.updateMany(
+            { _id: { $in: ids } },
+            { ...(role && { role }), ...(status && { status }) }
         )
 
-        return NextResponse.json({ user })
+        return NextResponse.json({ success: true, modified: result.modifiedCount })
     } catch (error) {
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
     }
@@ -72,18 +77,17 @@ export async function DELETE(req: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
-        const { userId } = await req.json()
-        if (!userId) {
-            return NextResponse.json({ error: "User ID required" }, { status: 400 })
-        }
-
-        const userToDelete = await User.findById(userId)
-        if (!userToDelete) {
-            return NextResponse.json({ error: "User not found" }, { status: 404 })
+        const { userId, userIds } = await req.json()
+        let ids = userIds || (userId ? [userId] : [])
+        
+        if (ids.length === 0) {
+            return NextResponse.json({ error: "No user IDs provided" }, { status: 400 })
         }
 
         // Prevent admin from deleting themselves
-        if (userId === currentUser.userId) {
+        ids = ids.filter((id: string) => id !== currentUser.userId)
+        
+        if (ids.length === 0) {
             return NextResponse.json({ error: "Cannot delete yourself" }, { status: 400 })
         }
 
@@ -91,8 +95,8 @@ export async function DELETE(req: Request) {
         const Video = (await import("@/lib/models/Video")).default
         const cloudinary = (await import("@/lib/cloudinary")).default
 
-        // Get videos to delete from Cloudinary
-        const userVideos = await Video.find({ uploader: userId })
+        // Get videos to delete from Cloudinary for all users
+        const userVideos = await Video.find({ uploader: { $in: ids } })
         
         // Clean up Cloudinary storage in parallel
         if (userVideos.length > 0) {
@@ -103,11 +107,11 @@ export async function DELETE(req: Request) {
         }
 
         // Clean up references
-        await Channel.findOneAndDelete({ owner: userId })
-        await Video.deleteMany({ uploader: userId })
-        await User.findByIdAndDelete(userId)
+        await Channel.deleteMany({ owner: { $in: ids } })
+        await Video.deleteMany({ uploader: { $in: ids } })
+        await User.deleteMany({ _id: { $in: ids } })
 
-        return NextResponse.json({ success: true })
+        return NextResponse.json({ success: true, deleted: ids.length })
     } catch (error) {
         console.error("User deletion error:", error)
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })

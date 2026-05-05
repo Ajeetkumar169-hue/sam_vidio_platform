@@ -12,8 +12,9 @@ import {
     TableRow
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "sonner"
-import { Trash2, CheckCircle, XCircle, ExternalLink, Search } from "lucide-react"
+import { Trash2, CheckCircle, XCircle, ExternalLink, Search, CheckSquare } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
     Select,
@@ -31,6 +32,7 @@ export default function AdminVideos() {
     const [page, setPage] = useState(1)
     const [limit, setLimit] = useState(10)
     const [pagination, setPagination] = useState({ total: 0, totalPages: 1 })
+    const [selectedIds, setSelectedIds] = useState<string[]>([])
     const [mounted, setMounted] = useState(false)
 
     const fetchVideos = async () => {
@@ -49,6 +51,7 @@ export default function AdminVideos() {
 
     useEffect(() => {
         setPage(1) // Reset page on status change
+        setSelectedIds([]) // Reset selections
     }, [statusFilter])
 
     useEffect(() => {
@@ -92,6 +95,55 @@ export default function AdminVideos() {
         } catch {
             toast.error("Failed to delete video")
         }
+    }
+
+    const handleBulkStatus = async (status: string) => {
+        if (selectedIds.length === 0) return
+        try {
+            const res = await fetch("/api/admin/videos", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ videoIds: selectedIds, status }),
+            })
+            if (!res.ok) throw new Error()
+            toast.success(`${selectedIds.length} videos ${status} successfully`)
+            setSelectedIds([])
+            fetchVideos()
+        } catch {
+            toast.error(`Failed to ${status} selected videos`)
+        }
+    }
+
+    const handleBulkDelete = async () => {
+        if (selectedIds.length === 0) return
+        if (!confirm(`Are you sure you want to delete ${selectedIds.length} videos? This will also remove them from Cloudinary.`)) return
+        try {
+            const res = await fetch("/api/admin/videos", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ videoIds: selectedIds }),
+            })
+            if (!res.ok) throw new Error()
+            toast.success(`${selectedIds.length} videos deleted`)
+            setSelectedIds([])
+            fetchVideos()
+        } catch {
+            toast.error("Failed to delete selected videos")
+        }
+    }
+
+    const toggleSelectAll = () => {
+        if (selectedIds.length === videos.length) {
+            setSelectedIds([])
+        } else {
+            setSelectedIds(videos.map(v => v._id))
+        }
+    }
+
+    const toggleSelect = (id: string) => {
+        setSelectedIds(prev => 
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        )
     }
 
     if (!mounted) return null
@@ -143,10 +195,32 @@ export default function AdminVideos() {
                 </div>
             </div>
 
+            {/* Bulk Actions */}
+            {selectedIds.length > 0 && (
+                <div className="flex flex-wrap gap-2 items-center bg-muted/50 p-3 rounded-lg border">
+                    <span className="text-sm font-medium mr-2">{selectedIds.length} selected</span>
+                    <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleBulkStatus("approved")}>
+                        <CheckCircle className="h-4 w-4 mr-2" /> Approve All
+                    </Button>
+                    <Button size="sm" variant="outline" className="text-red-600" onClick={() => handleBulkStatus("rejected")}>
+                        <XCircle className="h-4 w-4 mr-2" /> Reject All
+                    </Button>
+                    <Button size="sm" variant="destructive" onClick={handleBulkDelete}>
+                        <Trash2 className="h-4 w-4 mr-2" /> Delete All
+                    </Button>
+                </div>
+            )}
+
             <div className="border rounded-lg bg-card overflow-x-auto platinum-scrollbar pb-6">
                 <Table>
                     <TableHeader>
                         <TableRow>
+                            <TableHead className="w-12 text-center">
+                                <Checkbox 
+                                    checked={videos.length > 0 && selectedIds.length === videos.length}
+                                    onCheckedChange={toggleSelectAll}
+                                />
+                            </TableHead>
                             <TableHead>Video</TableHead>
                             <TableHead>Uploader</TableHead>
                             <TableHead>Category</TableHead>
@@ -161,7 +235,13 @@ export default function AdminVideos() {
                         ) : videos.length === 0 ? (
                             <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No videos found.</TableCell></TableRow>
                         ) : videos.map((video) => (
-                            <TableRow key={video._id}>
+                            <TableRow key={video._id} className={selectedIds.includes(video._id) ? "bg-muted/30" : ""}>
+                                <TableCell className="text-center">
+                                    <Checkbox 
+                                        checked={selectedIds.includes(video._id)}
+                                        onCheckedChange={() => toggleSelect(video._id)}
+                                    />
+                                </TableCell>
                                 <TableCell>
                                     <div className="flex items-center gap-3">
                                         <img

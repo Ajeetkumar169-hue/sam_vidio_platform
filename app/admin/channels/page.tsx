@@ -12,6 +12,7 @@ import {
     TableRow
 } from "@/components/ui/table"
 import { toast } from "sonner"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Trash2, Search, ExternalLink, Tv2, Eye, TrendingUp, ThumbsUp, ThumbsDown, PlayCircle, Users, Loader2 } from "lucide-react"
 import {
     Dialog,
@@ -29,6 +30,7 @@ export default function AdminChannels() {
     const [selectedChannel, setSelectedChannel] = useState<any>(null)
     const [isDetailOpen, setIsDetailOpen] = useState(false)
     const [loadingDetails, setLoadingDetails] = useState(false)
+    const [selectedIds, setSelectedIds] = useState<string[]>([])
 
     const fetchChannels = () => {
         setLoading(true)
@@ -43,6 +45,7 @@ export default function AdminChannels() {
 
     useEffect(() => {
         setMounted(true)
+        setSelectedIds([]) // Reset selections
         const timer = setTimeout(fetchChannels, 500)
         return () => clearTimeout(timer)
     }, [search])
@@ -70,6 +73,51 @@ export default function AdminChannels() {
         } catch {
             toast.error("Failed to delete channel")
         }
+    }
+
+    const handleBulkDelete = async () => {
+        if (selectedIds.length === 0) return
+        
+        const confirmDelete = window.confirm(
+            `Are you sure you want to delete ${selectedIds.length} channels? Click OK to delete the channels ONLY, or cancel to abort.`
+        )
+
+        if (!confirmDelete) return
+
+        const deleteVideosConf = window.confirm(
+            "Do you also want to delete all videos associated with these channels? Click OK to delete videos as well, Cancel to keep them orphaned."
+        )
+
+        try {
+            const res = await fetch("/api/admin/channels", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ channelIds: selectedIds, deleteVideos: deleteVideosConf }),
+            })
+            if (!res.ok) {
+                const data = await res.json()
+                throw new Error(data.error || "Failed to delete channels")
+            }
+            toast.success(`${selectedIds.length} channels deleted successfully`)
+            setSelectedIds([])
+            fetchChannels()
+        } catch (error: any) {
+            toast.error(error.message || "Failed to delete channels")
+        }
+    }
+
+    const toggleSelectAll = () => {
+        if (selectedIds.length === channels.length) {
+            setSelectedIds([])
+        } else {
+            setSelectedIds(channels.map(c => c._id))
+        }
+    }
+
+    const toggleSelect = (id: string) => {
+        setSelectedIds(prev => 
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        )
     }
 
     const fetchChannelDetails = async (id: any) => {
@@ -117,10 +165,26 @@ export default function AdminChannels() {
                 </div>
             </div>
 
+            {/* Bulk Actions */}
+            {selectedIds.length > 0 && (
+                <div className="flex flex-wrap gap-2 items-center bg-muted/50 p-3 rounded-lg border">
+                    <span className="text-sm font-medium mr-2">{selectedIds.length} channels selected</span>
+                    <Button size="sm" variant="destructive" onClick={handleBulkDelete}>
+                        <Trash2 className="h-4 w-4 mr-2" /> Delete Selected Channels
+                    </Button>
+                </div>
+            )}
+
             <div className="border rounded-lg bg-card text-card-foreground overflow-x-auto platinum-scrollbar pb-6">
                 <Table>
                     <TableHeader>
                         <TableRow>
+                            <TableHead className="w-12 text-center">
+                                <Checkbox 
+                                    checked={channels.length > 0 && selectedIds.length === channels.length}
+                                    onCheckedChange={toggleSelectAll}
+                                />
+                            </TableHead>
                             <TableHead>Channel Info</TableHead>
                             <TableHead>Owner</TableHead>
                             <TableHead>Stats</TableHead>
@@ -134,7 +198,13 @@ export default function AdminChannels() {
                         ) : channels.length === 0 ? (
                             <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No channels found.</TableCell></TableRow>
                         ) : channels.map((channel) => (
-                            <TableRow key={channel._id}>
+                            <TableRow key={channel._id} className={selectedIds.includes(channel._id) ? "bg-muted/30" : ""}>
+                                <TableCell className="text-center">
+                                    <Checkbox 
+                                        checked={selectedIds.includes(channel._id)}
+                                        onCheckedChange={() => toggleSelect(channel._id)}
+                                    />
+                                </TableCell>
                                 <TableCell>
                                     <div className="flex items-center gap-3">
                                         {channel.logo ? (

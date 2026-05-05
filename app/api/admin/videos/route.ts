@@ -62,10 +62,20 @@ export async function PUT(req: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
-        const { videoId, status } = await req.json()
-        const video = await Video.findByIdAndUpdate(videoId, { status }, { new: true })
+        const { videoId, videoIds, status } = await req.json()
+        
+        // Bulk update support
+        const ids = videoIds || (videoId ? [videoId] : [])
+        if (ids.length === 0) {
+            return NextResponse.json({ error: "No video IDs provided" }, { status: 400 })
+        }
 
-        return NextResponse.json({ video })
+        const result = await Video.updateMany(
+            { _id: { $in: ids } },
+            { status },
+        )
+
+        return NextResponse.json({ success: true, modified: result.modifiedCount })
     } catch (error) {
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
     }
@@ -79,42 +89,51 @@ export async function DELETE(req: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
-        const { videoId } = await req.json()
-        const { runWithRetry } = await import("@/lib/db")
-        const { deleteAsset } = await import("@/lib/cloudinary")
+        const { videoId, videoIds } = await req.json()
+        const ids = videoIds || (videoId ? [videoId] : [])
+        if (ids.length === 0) {
+            return NextResponse.json({ error: "No video IDs provided" }, { status: 400 })
+        }
 
-        await runWithRetry(async (session) => {
-            const video = await Video.findById(videoId).session(session)
-            if (!video) throw new Error("Video not found")
+        const Channel = (await import("@/lib/models/Channel")).default
+        let deletedCount = 0
 
-            // 1. Decrement counts
-            if (video.category) {
-                await Category.updateOne(
-                    { _id: video.category, videoCount: { $gt: 0 } },
-                    { $inc: { videoCount: -1 } },
-                    { session: session ?? undefined }
-                )
+        for (const id of ids) {
+            try {
+                const video = await Video.findById(id)
+                if (!video) continue
+
+                // 1. Decrement counts
+                if (video.category) {
+                    await Category.updateOne(
+                        { _id: video.category, videoCount: { $gt: 0 } },
+                        { $inc: { videoCount: -1 } }
+                    )
+                }
+                if (video.channel) {
+                    await Channel.updateOne(
+                        { _id: video.channel, videoCount: { $gt: 0 } },
+                        { $inc: { videoCount: -1 } }
+                    )
+                }
+
+                // 2. Delete Asset
+                if (video.filePublicId) {
+                    try {
+                        const { deleteAsset } = await import("@/lib/cloudinary")
+                        await deleteAsset(video.filePublicId, "video")
+                    } catch (e) { /* ignore asset delete errors */ }
+                }
+
+                // 3. Delete DB record
+                await Video.findByIdAndDelete(id)
+                deletedCount++
+            } catch (e) {
+                console.error(`Failed to delete video ${id}:`, e)
             }
+        }
 
-            const Channel = (await import("@/lib/models/Channel")).default
-            if (video.channel) {
-                await Channel.updateOne(
-                    { _id: video.channel, videoCount: { $gt: 0 } },
-                    { $inc: { videoCount: -1 } },
-                    { session: session ?? undefined }
-                )
-            }
-
-            // 2. Delete Asset (Cloudinary or Local)
-            if (video.filePublicId) {
-                await deleteAsset(video.filePublicId, "video")
-            }
-
-            // 3. Delete DB record
-            await Video.findByIdAndDelete(videoId).session(session ?? null)
-        })
-
-        return NextResponse.json({ success: true })
+        return NextResponse.json({ success: true, deleted: deletedCount })
     } catch (error: any) {
         console.error("❌ Admin delete error:", error)
         return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 })
