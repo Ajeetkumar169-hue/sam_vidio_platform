@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search")
 
     const query: any = { 
-      status: "approved", 
+      status: { $in: ["approved", "pending"] }, 
       isDeleted: { $ne: true } 
     }
     
