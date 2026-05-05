@@ -52,7 +52,10 @@ export function VideoPlayer({ url, poster, className = "", qualities = [] }: Vid
     if (!currentUrl) return
 
     // 1. Check if it's a direct video link
-    const isDirectVideo = currentUrl.match(/\.(mp4|webm|ogg|mov|m4v|m3u8)$|^(\/uploads\/)/i)
+    const isDirectVideo = currentUrl.match(/\.(mp4|webm|ogg|mov|m4v|m3u8|mpd)$|^(\/uploads\/)/i) || 
+                         (currentUrl.includes("s3.") && !currentUrl.includes("youtube.com")) ||
+                         (currentUrl.includes("digitaloceanspaces.com")) ||
+                         (currentUrl.includes("r2.cloudflarestorage.com"))
     
     if (isDirectVideo) {
       setPlayerType("video")

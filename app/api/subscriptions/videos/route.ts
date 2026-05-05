@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
     // 2. Fetch videos from those channels
     const query: any = {
       channel: { $in: channelIds },
-      status: { $in: ["approved", "pending"] },
+      status: "approved",
       isDeleted: { $ne: true }
     }
 

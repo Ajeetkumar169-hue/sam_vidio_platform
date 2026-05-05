@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
                 category: metadata.categoryId || null,
                 tags: metadata.tags || [],
                 visibility: metadata.visibility || "public",
-                status: "pending", // Default to pending so admin can approve/reject
+                status: "pending", // Initial status is pending, but visible to public
                 processingProgress: 100,
                 filePublicId: key,
                 storageSize: metadata.fileSize || 0,
