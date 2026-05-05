@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 import { Users, Film, Calendar, Camera } from "lucide-react"
 import { BrandUpload } from "@/components/brand-upload"
+import { cn } from "@/lib/utils"
 
 interface ChannelData {
   _id?: string
