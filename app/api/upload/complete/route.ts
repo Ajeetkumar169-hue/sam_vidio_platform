@@ -101,8 +101,8 @@ export async function POST(req: NextRequest) {
                 category: metadata.categoryId || null,
                 tags: metadata.tags || [],
                 visibility: metadata.visibility || "public",
-                status: "processing", 
-                processingProgress: 10,
+                status: "approved", // Auto-approve since transcoder is not active
+                processingProgress: 100,
                 filePublicId: key,
                 storageSize: metadata.fileSize || 0,
                 uploadId: uploadId

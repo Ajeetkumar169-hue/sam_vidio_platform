@@ -112,6 +112,13 @@ export default function AdminVideos() {
                         Pending
                     </Button>
                     <Button
+                        variant={statusFilter === "processing" ? "default" : "outline"}
+                        onClick={() => setStatusFilter("processing")}
+                        size="sm"
+                    >
+                        Processing
+                    </Button>
+                    <Button
                         variant={statusFilter === "approved" ? "default" : "outline"}
                         onClick={() => setStatusFilter("approved")}
                         size="sm"
@@ -193,7 +200,7 @@ export default function AdminVideos() {
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex justify-end gap-1">
-                                        {video.status === "pending" && (
+                                        {(video.status === "pending" || video.status === "processing") && (
                                             <>
                                                 <Button
                                                     variant="ghost"
