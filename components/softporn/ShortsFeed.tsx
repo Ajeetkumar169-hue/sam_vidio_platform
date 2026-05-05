@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Loader2, ThumbsUp, MessageSquare, Share2, Music2, UserPlus, Zap } from "lucide-react"
+import { Loader2, ThumbsUp, MessageSquare, Share2, Music2, UserPlus, Zap, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { VideoPlayer } from "@/components/video-player"
 import { cn } from "@/lib/utils"
