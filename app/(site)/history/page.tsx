@@ -36,6 +36,9 @@ interface HistoryItem {
 export default function HistoryPage() {
   const { user, isLoading: authLoading } = useAuth()
   const router = useRouter()
+  const [history, setHistory] = useState<HistoryItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [clearing, setClearing] = useState(false)
   const [filter, setFilter] = useState<"all" | "videos" | "shorts">("all")
   const [searchQuery, setSearchQuery] = useState("")
 
