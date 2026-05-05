@@ -82,7 +82,7 @@ export function WatchView({ initialVideo }: WatchViewProps) {
         try {
           const relRes = await fetch(`/api/videos?category=${initialVideo.category._id}&limit=8`)
           const relData = await relRes.json()
-          setRelated((relData.videos || []).filter((v: VideoData) => v._id !== videoId))
+          setRelated((relData.data?.videos || relData.videos || []).filter((v: VideoData) => v._id !== videoId))
         } catch { }
       }
     }

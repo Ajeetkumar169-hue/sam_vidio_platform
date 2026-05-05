@@ -18,12 +18,12 @@ export default function CategoryPage() {
         // First get category info
         const catRes = await fetch("/api/categories")
         const catData = await catRes.json()
-        const cat = (catData.categories || []).find((c: any) => c.slug === slug)
+        const cat = (catData.data?.categories || catData.categories || []).find((c: any) => c.slug === slug)
         if (cat) {
           setCategoryName(cat.name)
           const vidRes = await fetch(`/api/videos?category=${cat._id || cat.id}&limit=40`)
           const vidData = await vidRes.json()
-          setVideos(vidData.videos || [])
+          setVideos(vidData.data?.videos || vidData.videos || [])
         }
       } catch {
         // handle error

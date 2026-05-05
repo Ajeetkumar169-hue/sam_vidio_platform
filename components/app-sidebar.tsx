@@ -51,7 +51,8 @@ export function AppSidebar({ open, pinned, onTogglePin, onClose, onMouseEnter, o
     fetch("/api/categories")
       .then((r) => r.json())
       .then((d) => {
-        if (d.categories) setCategories(d.categories)
+        const cats = d.data?.categories || d.categories;
+        if (cats) setCategories(cats)
       })
       .catch(() => { })
   }, [])

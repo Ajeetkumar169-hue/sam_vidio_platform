@@ -81,7 +81,7 @@ export default function AdminCategories() {
         try {
             const res = await fetch("/api/categories")
             const data = await res.json()
-            setCategories(data.categories || [])
+            setCategories(data.data?.categories || data.categories || [])
         } catch (err) {
             toast.error("Failed to load categories")
         } finally {

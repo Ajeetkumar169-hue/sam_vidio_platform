@@ -21,7 +21,7 @@ export default function CategoriesPage() {
   useEffect(() => {
     fetch("/api/categories")
       .then((r) => r.json())
-      .then((d) => setCategories(d.categories || []))
+      .then((d) => setCategories(d.data?.categories || d.categories || []))
       .catch(() => { })
       .finally(() => setLoading(false))
   }, [])

@@ -33,7 +33,7 @@ export default function UploadPage() {
     useEffect(() => {
         fetch("/api/categories")
             .then(r => r.json())
-            .then(d => setCategories(d.data || d.categories || []))
+            .then(d => setCategories(d.data?.categories || d.categories || []))
             .catch(() => {})
     }, [])
 

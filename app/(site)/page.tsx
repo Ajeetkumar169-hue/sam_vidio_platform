@@ -60,11 +60,11 @@ export default function HomePage() {
           fetch("/api/channels?limit=6").then((r) => r.ok ? r.json() : { channels: [] }).catch(() => ({ channels: [] })),
           fetch("/api/categories").then((r) => r.ok ? r.json() : { categories: [] }).catch(() => ({ categories: [] })),
         ])
-        setTrending(trendingRes.videos || [])
-        setLatest(latestRes.videos || [])
-        setTopRated(topRes.videos || [])
-        setChannels(channelRes.channels || [])
-        setCategories(catRes.categories || [])
+        setTrending(trendingRes.data?.videos || trendingRes.videos || [])
+        setLatest(latestRes.data?.videos || latestRes.videos || [])
+        setTopRated(topRes.data?.videos || topRes.videos || [])
+        setChannels(channelRes.data?.channels || channelRes.channels || [])
+        setCategories(catRes.data?.categories || catRes.categories || [])
       } catch (err) {
         console.error("Failed to load homepage:", err)
       } finally {
