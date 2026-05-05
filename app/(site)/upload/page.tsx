@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { S3TurboUploader } from "@/components/upload/s3-turbo-uploader"
 import { VideoMetadataForm } from "@/components/upload/video-metadata-form"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 
 export default function UploadPage() {
     const { user, isLoading: authLoading } = useAuth()
