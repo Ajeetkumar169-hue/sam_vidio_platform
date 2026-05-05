@@ -36,11 +36,13 @@ interface HistoryItem {
 export default function HistoryPage() {
   const { user, isLoading: authLoading } = useAuth()
   const router = useRouter()
-  const [history, setHistory] = useState<HistoryItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [clearing, setClearing] = useState(false)
-  const [filter, setFilter] = useState<"all" | "videos" | "shorts">("all")
-  const [searchQuery, setSearchQuery] = useState("")
+   const [history, setHistory] = useState<HistoryItem[]>([])
+   const [loading, setLoading] = useState(true)
+   const [clearing, setClearing] = useState(false)
+   const [filter, setFilter] = useState<"all" | "videos" | "shorts">("all")
+   const [searchQuery, setSearchQuery] = useState("")
+   const [isPaused, setIsPaused] = useState(false)
+   const [toggling, setToggling] = useState(false)
 
   const fetchHistory = useCallback(async () => {
     try {
@@ -49,6 +51,7 @@ export default function HistoryPage() {
       const data = await res.json()
       if (data.history) {
         setHistory(data.history)
+        setIsPaused(data.historyPaused || false)
       }
     } catch (error) {
       console.error("Fetch history error:", error)
@@ -93,6 +96,33 @@ export default function HistoryPage() {
     } finally {
       setClearing(false)
     }
+  }
+
+  const togglePause = async () => {
+    setToggling(true)
+    try {
+      const res = await fetch("/api/history/pause", { method: "POST" })
+      const data = await res.json()
+      if (data.success) {
+        setIsPaused(data.historyPaused)
+        toast.success(data.message)
+      }
+    } catch (error) {
+      toast.error("Failed to update history settings")
+    } finally {
+      setToggling(false)
+    }
+  }
+
+  const handleShare = (video: any) => {
+    const url = `${window.location.origin}/watch/${video._id || video.id}`
+    navigator.clipboard.writeText(url)
+    toast.success("Link copied to clipboard!")
+  }
+
+  const handleDownload = (video: any) => {
+    toast.info(`Starting download: ${video.title}`)
+    // In a real app, this would trigger a download link or server-side process
   }
 
   const filteredHistory = history.filter(item => {
@@ -204,11 +234,17 @@ export default function HistoryPage() {
                                  </button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-56 bg-zinc-900 border-white/10 rounded-xl p-1 shadow-2xl">
-                                 <DropdownMenuItem className="flex items-center gap-3 py-2.5 rounded-lg cursor-pointer focus:bg-white/10">
+                                 <DropdownMenuItem 
+                                   className="flex items-center gap-3 py-2.5 rounded-lg cursor-pointer focus:bg-white/10"
+                                   onClick={() => handleDownload(item.video)}
+                                 >
                                     <Download className="h-4 w-4" />
                                     <span className="font-bold text-sm">Download</span>
                                  </DropdownMenuItem>
-                                 <DropdownMenuItem className="flex items-center gap-3 py-2.5 rounded-lg cursor-pointer focus:bg-white/10">
+                                 <DropdownMenuItem 
+                                   className="flex items-center gap-3 py-2.5 rounded-lg cursor-pointer focus:bg-white/10"
+                                   onClick={() => handleShare(item.video)}
+                                 >
                                     <Share2 className="h-4 w-4" />
                                     <span className="font-bold text-sm">Share</span>
                                  </DropdownMenuItem>
@@ -254,21 +290,14 @@ export default function HistoryPage() {
                 disabled={clearing}
               />
               <SidebarAction 
-                icon={<Pause className="h-5 w-5" />} 
-                label="Pause watch history" 
-              />
-              <SidebarAction 
-                icon={<Settings className="h-5 w-5" />} 
-                label="Manage all history" 
+                icon={isPaused ? <HistoryIcon className="h-5 w-5 text-red-500" /> : <Pause className="h-5 w-5" />} 
+                label={isPaused ? "Resume watch history" : "Pause watch history"} 
+                onClick={togglePause}
+                disabled={toggling}
               />
            </div>
 
-           {/* External Links (Mock) */}
-           <div className="pt-4 space-y-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">
-              <p className="hover:text-white cursor-pointer transition-colors">Comments</p>
-              <p className="hover:text-white cursor-pointer transition-colors">Community posts</p>
-              <p className="hover:text-white cursor-pointer transition-colors">Live chat</p>
-           </div>
+
         </div>
 
       </div>

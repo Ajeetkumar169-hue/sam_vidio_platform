@@ -11,6 +11,7 @@ export interface IUser extends Document {
   dateOfBirth: Date
   phoneNumber: string
   gender: "male" | "female" | "lesbian" | "gay"
+  historyPaused: boolean
   createdAt: Date
 }
 
@@ -30,6 +31,7 @@ const UserSchema = new Schema<IUser>(
       enum: ["male", "female", "lesbian", "gay"], 
       required: true 
     },
+    historyPaused: { type: Boolean, default: false },
   },
   { timestamps: true }
 )

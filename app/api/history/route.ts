@@ -13,6 +13,10 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Get user settings
+    const User = (await import("@/lib/models/User")).default
+    const userData = await User.findById(user.userId).select("historyPaused")
+
     const historyItems = await History.find({ user: user.userId })
       .sort({ updatedAt: -1 }) // Sort by last updated (youtube-like)
       .limit(50)
@@ -28,7 +32,10 @@ export async function GET() {
     // Filter out items where video might have been deleted
     const validHistory = historyItems.filter(item => item.video)
 
-    return NextResponse.json({ history: validHistory })
+    return NextResponse.json({ 
+      history: validHistory,
+      historyPaused: userData?.historyPaused || false
+    })
   } catch (error) {
     console.error("Fetch history error:", error)
     return NextResponse.json({ error: "Server error" }, { status: 500 })
@@ -42,6 +49,13 @@ export async function POST(req: Request) {
     const user = await getCurrentUser()
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // Check if history is paused
+    const User = (await import("@/lib/models/User")).default
+    const userData = await User.findById(user.userId).select("historyPaused")
+    if (userData?.historyPaused) {
+      return NextResponse.json({ success: true, message: "History recording is paused" })
     }
 
     const { videoId } = await req.json()
