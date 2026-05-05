@@ -35,7 +35,7 @@ export class S3UploadManager {
     
     private workers: Worker[] = [];
     private concurrency: number = 6;
-    private chunkSize: number = 16 * 1024 * 1024; 
+    private chunkSize: number = 4 * 1024 * 1024; // 4MB - Vercel serverless limit is 4.5MB
     private throughputHistory: number[] = [];
     private lastProgressTime: number = Date.now();
     private aiStatus: string = "Analyzing Global Routes...";
@@ -81,14 +81,14 @@ export class S3UploadManager {
         this.emitProgress({ message: "Activating Global Distributed Ingestion..." });
 
         // 🧠 AI Load Balancer: Set initial state based on file complexity
-        this.concurrency = this.file.size > 100 * 1024 * 1024 ? 8 : 4;
+        this.concurrency = this.file.size > 100 * 1024 * 1024 ? 6 : 4;
         
         const session = await idbGet(this.getSessionKey());
         if (session) {
             this.uploadId = session.uploadId;
             this.key = session.key;
             this.parts = session.parts || [];
-            this.uploadedBytes = this.parts.reduce((acc, p) => acc + (16 * 1024 * 1024), 0);
+            this.uploadedBytes = this.parts.reduce((acc, p) => acc + (4 * 1024 * 1024), 0);
             this.uploadedBytes = Math.min(this.uploadedBytes, this.file.size);
             this.aiStatus = "Distributed Session Restored ✅";
         } else {
@@ -182,13 +182,12 @@ export class S3UploadManager {
 
     private updateAIModel(speed: number) {
         if (speed > 50) {
-            this.aiStatus = "Hyper-Scaling: 12 Nodes Active 🚀";
-            this.concurrency = 12;
-            this.chunkSize = 64 * 1024 * 1024;
+            this.aiStatus = "Hyper-Scaling: 8 Nodes Active 🚀";
+            this.concurrency = 8;
+            // Keep chunk size at 4MB for Vercel compatibility
         } else if (speed < 10) {
             this.aiStatus = "Congestion Control: Throttling Down 🐢";
-            this.concurrency = 4;
-            this.chunkSize = 16 * 1024 * 1024;
+            this.concurrency = 3;
         } else {
             this.aiStatus = "Optimized Global Flow ✅";
         }
@@ -258,8 +257,8 @@ export class S3UploadManager {
             this.uploadId = session.uploadId;
             this.key = session.key;
             this.parts = session.parts || [];
-            // Assume 16MB chunks for progress estimation
-            this.uploadedBytes = this.parts.reduce((acc, p) => acc + (16 * 1024 * 1024), 0);
+            // Assume 4MB chunks for progress estimation
+            this.uploadedBytes = this.parts.reduce((acc, p) => acc + (4 * 1024 * 1024), 0);
             this.uploadedBytes = Math.min(this.uploadedBytes, this.file.size);
             this.status = 'paused';
             return true;

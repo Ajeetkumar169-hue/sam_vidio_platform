@@ -25,7 +25,7 @@ export const CONFIG = {
 
     // Performance
     UPLOAD: {
-        CHUNK_SIZE: 16 * 1024 * 1024, // 16MB Base
+        CHUNK_SIZE: 4 * 1024 * 1024, // 4MB - Vercel compatible
         MAX_WORKERS: 12,
     },
 

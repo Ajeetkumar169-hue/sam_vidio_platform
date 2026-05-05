@@ -24,32 +24,44 @@ export async function POST(req: NextRequest) {
 
         if (MOCK_MODE && uploadId.startsWith("mock-")) {
             console.log("📁 [MOCK S3] Completing mock upload for:", uploadId);
-            
-            const tempDir = path.join(process.cwd(), "public", "uploads", ".temp", uploadId);
-            const finalDir = path.join(process.cwd(), "public", "uploads", "videos");
+            const isVercel = !!process.env.VERCEL;
             const fileName = key.split("/").pop(); 
             
-            if (!fs.existsSync(finalDir)) fs.mkdirSync(finalDir, { recursive: true });
+            if (isVercel) {
+                // Vercel: filesystem is read-only, skip file assembly
+                // Use the video URL from metadata if provided (link mode),
+                // otherwise generate a placeholder
+                videoUrl = metadata.videoUrl || `/uploads/videos/${fileName}`;
+                console.log("📁 [MOCK S3] Vercel mode - skipping file assembly, URL:", videoUrl);
+            } else {
+                // Local dev: save chunks to disk for real assembly
+                const tempDir = path.join(process.cwd(), "public", "uploads", ".temp", uploadId);
+                const finalDir = path.join(process.cwd(), "public", "uploads", "videos");
+                
+                if (!fs.existsSync(finalDir)) fs.mkdirSync(finalDir, { recursive: true });
 
-            const finalPath = path.join(finalDir, fileName);
-            const writeStream = fs.createWriteStream(finalPath);
-            const sortedParts = parts.sort((a: any, b: any) => a.PartNumber - b.PartNumber);
+                const finalPath = path.join(finalDir, fileName);
+                const writeStream = fs.createWriteStream(finalPath);
+                const sortedParts = parts.sort((a: any, b: any) => a.PartNumber - b.PartNumber);
 
-            for (const part of sortedParts) {
-                const partPath = path.join(tempDir, `${part.PartNumber}.part`);
-                if (fs.existsSync(partPath)) {
-                    writeStream.write(fs.readFileSync(partPath));
+                for (const part of sortedParts) {
+                    const partPath = path.join(tempDir, `${part.PartNumber}.part`);
+                    if (fs.existsSync(partPath)) {
+                        writeStream.write(fs.readFileSync(partPath));
+                    }
                 }
+                writeStream.end();
+
+                await new Promise((resolve, reject) => {
+                    writeStream.on("finish", () => resolve(undefined));
+                    writeStream.on("error", (err) => reject(err));
+                });
+
+                if (fs.existsSync(tempDir)) {
+                    fs.rmSync(tempDir, { recursive: true, force: true });
+                }
+                videoUrl = `/uploads/videos/${fileName}`;
             }
-            writeStream.end();
-
-            await new Promise((resolve, reject) => {
-                writeStream.on("finish", () => resolve(undefined));
-                writeStream.on("error", (err) => reject(err));
-            });
-
-            fs.rmSync(tempDir, { recursive: true, force: true });
-            videoUrl = `/uploads/videos/${fileName}`;
         } else {
             const command = new CompleteMultipartUploadCommand({
                 Bucket: BUCKET_NAME,

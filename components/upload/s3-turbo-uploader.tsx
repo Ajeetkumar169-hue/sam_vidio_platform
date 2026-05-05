@@ -58,8 +58,8 @@ export function S3TurboUploader({ onUploadComplete, onFileSelected, metadata }: 
         if (!uploadManager) return
         try {
             const result = await uploadManager.start(metadata)
-            if (result.success) {
-                onUploadComplete(result.video)
+            if (result?.video || result) {
+                onUploadComplete(result?.video || result)
                 toast.success("S3 Turbo Upload Complete!")
             }
         } catch (err: any) {
