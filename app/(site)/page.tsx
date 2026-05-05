@@ -22,6 +22,7 @@ interface Video {
   channel?: { name: string; slug: string; logo?: string }
   uploader?: { username: string; avatar?: string }
   category?: { name: string; slug: string }
+  videoUrl: string
 }
 
 interface ChannelData {
@@ -91,9 +92,10 @@ export default function HomePage() {
               Let&apos;s talk
             </Button>
           </Link>
-          <Link href="/categories" className="w-full md:w-auto">
-            <Button size="sm" variant="secondary" className="gap-2 w-full md:w-auto">
-              Browse Categories
+          <Link href="/softporn" className="w-full md:w-auto">
+            <Button size="sm" variant="secondary" className="gap-2 w-full md:md:w-auto bg-white/5 hover:bg-white/10 text-white font-bold border-white/5 rounded-full px-6">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              SoftPorn
             </Button>
           </Link>
         </div>

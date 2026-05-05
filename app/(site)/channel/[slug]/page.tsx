@@ -41,6 +41,7 @@ export default function ChannelPage() {
   const [loading, setLoading] = useState(true)
   const [subscribed, setSubscribed] = useState(false)
   const [subCount, setSubCount] = useState(0)
+  const [activeTab, setActiveTab] = useState<"videos" | "softporn">("videos")
 
   useEffect(() => {
     async function load() {
@@ -222,14 +223,40 @@ export default function ChannelPage() {
           </p>
         )}
 
-        {/* Videos */}
+        {/* Tabs Selection */}
+        <div className="mt-8 mb-6 flex items-center gap-4 border-b border-white/5">
+            <button 
+                onClick={() => setActiveTab("videos")}
+                className={cn(
+                    "pb-3 px-2 text-sm font-bold uppercase tracking-widest transition-all relative",
+                    activeTab === "videos" ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                )}
+            >
+                Videos
+                {activeTab === "videos" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]" />}
+            </button>
+            <button 
+                onClick={() => setActiveTab("softporn")}
+                className={cn(
+                    "pb-3 px-2 text-sm font-bold uppercase tracking-widest transition-all relative",
+                    activeTab === "softporn" ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                )}
+            >
+                SoftPorn
+                {activeTab === "softporn" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]" />}
+            </button>
+        </div>
+
+        {/* Videos Grid */}
         <div className="mt-4">
-          <h2 className="mb-4 text-lg font-semibold text-foreground">Videos</h2>
-          {videos.length === 0 ? (
-            <p className="text-center text-muted-foreground">No videos uploaded yet</p>
+          {videos.filter(v => activeTab === "softporn" ? v.isShort : !v.isShort).length === 0 ? (
+            <div className="flex flex-col items-center py-20 opacity-50">
+               <Film className="h-12 w-12 mb-4" />
+               <p className="text-center text-muted-foreground font-bold uppercase tracking-widest text-xs">No {activeTab === "softporn" ? "SoftPorn shorts" : "videos"} uploaded yet</p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {videos.map((v) => (
+              {videos.filter(v => activeTab === "softporn" ? v.isShort : !v.isShort).map((v) => (
                 <VideoCard key={v._id || v.id} video={v} />
               ))}
             </div>
