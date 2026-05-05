@@ -8,6 +8,7 @@ interface VideoCardProps {
     _id?: string
     id?: string
     title: string
+    videoUrl: string
     thumbnailUrl: string
     views: number
     likes: number
