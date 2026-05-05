@@ -218,53 +218,58 @@ export function WatchView({ initialVideo }: WatchViewProps) {
                 </span>
               </div>
 
-              {/* Actions Row */}
-              <div className="flex w-full items-center justify-between gap-2 overflow-x-auto platinum-scrollbar pb-1 no-scrollbar sm:overflow-visible mt-3">
-                {/* Left: Like/Dislike */}
-                <div className="flex items-center rounded-full bg-secondary p-1 flex-shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={cn(
-                      "gap-2 rounded-l-full pr-4 border-r border-white/10 hover:bg-white/5",
-                      liked && "text-primary"
-                    )}
-                    onClick={handleLike}
-                  >
-                    <ThumbsUp className={cn("h-4 w-4", liked && "fill-current")} />
-                    <span className="text-xs font-bold">{formatNumber(likeCount)}</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={cn(
-                      "gap-2 rounded-r-full pl-4 hover:bg-white/5",
-                      disliked && "text-destructive"
-                    )}
-                    onClick={handleDislike}
-                  >
-                    <ThumbsUp className={cn("h-4 w-4 rotate-180", disliked && "fill-current")} />
-                    <span className="text-xs font-bold">-{formatNumber(dislikeCount)}</span>
-                  </Button>
-                </div>
-                
-                {/* Right: Share, Download, Delete */}
-                <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
-                  <ShareDialog videoId={videoId} title={video.title} description={video.description} />
-                  
-                  <DownloadButton video={video} />
-                  
+              {/* Actions System */}
+              <div className="mt-4 flex flex-col items-end gap-3 px-4 sm:px-0">
+                {/* Row 1: Like, Dislike, Delete, Download */}
+                <div className="flex flex-wrap items-center justify-end gap-2 w-full">
+                  {/* Like/Dislike Group */}
+                  <div className="flex items-center rounded-full bg-secondary p-1 flex-shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={cn(
+                        "gap-2 rounded-l-full pr-4 border-r border-white/10 hover:bg-white/5",
+                        liked && "text-primary"
+                      )}
+                      onClick={handleLike}
+                    >
+                      <ThumbsUp className={cn("h-4 w-4", liked && "fill-current")} />
+                      <span className="text-xs font-bold">{formatNumber(likeCount)}</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={cn(
+                        "gap-2 rounded-r-full pl-4 hover:bg-white/5",
+                        disliked && "text-destructive"
+                      )}
+                      onClick={handleDislike}
+                    >
+                      <ThumbsUp className={cn("h-4 w-4 rotate-180", disliked && "fill-current")} />
+                      <span className="text-xs font-bold">-{formatNumber(dislikeCount)}</span>
+                    </Button>
+                  </div>
+
+                  {/* Admin Delete */}
                   {user?.role === "admin" && (
                     <Button 
                       variant="destructive" 
                       size="sm" 
-                      className="gap-2" 
+                      className="gap-2 h-9 rounded-full px-4" 
                       onClick={handleDelete}
                     >
                       <Trash2 className="h-4 w-4" />
                       <span className="hidden sm:inline">Delete</span>
                     </Button>
                   )}
+
+                  {/* Download */}
+                  <DownloadButton video={video} />
+                </div>
+
+                {/* Row 2: Share Button (Aligned Right) */}
+                <div className="flex justify-end w-full">
+                  <ShareDialog videoId={videoId} title={video.title} description={video.description} />
                 </div>
               </div>
             </div>

@@ -176,6 +176,20 @@ export function VideoPlayer({ url, poster, className = "", qualities = [] }: Vid
           preload="metadata"
           onClick={togglePlay}
           onDoubleClick={toggleFullscreen}
+          onError={(e) => {
+            const video = e.currentTarget;
+            let msg = "Unknown error occurred";
+            if (video.error) {
+              switch (video.error.code) {
+                case 1: msg = "Playback aborted by user"; break;
+                case 2: msg = "Network error while loading video"; break;
+                case 3: msg = "Video decoding failed (corrupted file?)"; break;
+                case 4: msg = "Video format not supported or source not found"; break;
+              }
+            }
+            console.error("❌ [Video Player Error]:", msg, video.error);
+            setError(msg);
+          }}
         />
 
         {/* Custom Controls Overlay */}
