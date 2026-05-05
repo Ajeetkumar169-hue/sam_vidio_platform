@@ -26,9 +26,14 @@ export async function GET(req: NextRequest) {
     const isShort = searchParams.get("isShort") === "true"
 
     const query: any = { 
-      status: { $in: ["approved", "pending"] }, 
+      status: { $in: ["approved", "pending", "ready"] }, 
       isDeleted: { $ne: true },
-      isShort: isShort
+    }
+
+    if (isShort) {
+        query.isShort = true
+    } else {
+        query.isShort = { $ne: true } // This catches both 'false' and 'undefined'
     }
     
     if (category) query.category = category

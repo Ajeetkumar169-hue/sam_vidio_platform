@@ -199,7 +199,7 @@ export default function DashboardPage() {
         {/* Videos Tab */}
         <TabsContent value="videos">
           <VideoList 
-            videos={data.videos.filter(v => !v.isShort && v.status !== "pending")} 
+            videos={data.videos.filter(v => !v.isShort)} 
             onDelete={handleDeleteVideo}
           />
         </TabsContent>
@@ -207,7 +207,7 @@ export default function DashboardPage() {
         {/* SoftPorn Tab */}
         <TabsContent value="softporn">
           <VideoList 
-            videos={data.videos.filter(v => v.isShort && v.status !== "pending")} 
+            videos={data.videos.filter(v => v.isShort)} 
             onDelete={handleDeleteVideo}
           />
         </TabsContent>
