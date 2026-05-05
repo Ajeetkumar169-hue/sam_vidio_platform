@@ -218,9 +218,10 @@ export function WatchView({ initialVideo }: WatchViewProps) {
                 </span>
               </div>
 
-              {/* Actions */}
-              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-                <div className="flex items-center rounded-full bg-secondary p-1">
+              {/* Actions Row */}
+              <div className="flex w-full items-center justify-between gap-2 overflow-x-auto platinum-scrollbar pb-1 no-scrollbar sm:overflow-visible mt-3">
+                {/* Left: Like/Dislike */}
+                <div className="flex items-center rounded-full bg-secondary p-1 flex-shrink-0">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -247,22 +248,24 @@ export function WatchView({ initialVideo }: WatchViewProps) {
                   </Button>
                 </div>
                 
-                {/* Modern Share Trigger */}
-                <ShareDialog videoId={videoId} title={video.title} description={video.description} />
-                
-                <DownloadButton video={video} />
-                
-                {user?.role === "admin" && (
-                  <Button 
-                    variant="destructive" 
-                    size="sm" 
-                    className="gap-2 w-full sm:w-auto" 
-                    onClick={handleDelete}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Delete
-                  </Button>
-                )}
+                {/* Right: Share, Download, Delete */}
+                <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
+                  <ShareDialog videoId={videoId} title={video.title} description={video.description} />
+                  
+                  <DownloadButton video={video} />
+                  
+                  {user?.role === "admin" && (
+                    <Button 
+                      variant="destructive" 
+                      size="sm" 
+                      className="gap-2" 
+                      onClick={handleDelete}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span className="hidden sm:inline">Delete</span>
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
 

@@ -73,7 +73,20 @@ export async function POST(req: NextRequest) {
             });
 
             await s3Client.send(command);
-            videoUrl = `https://${BUCKET_NAME}.s3.${CONFIG.S3.REGION}.amazonaws.com/${key}`;
+            
+            // Generate dynamic URL based on environment or AWS standard
+            if (process.env.NEXT_PUBLIC_S3_URL) {
+                const baseUrl = process.env.NEXT_PUBLIC_S3_URL.replace(/\/$/, "");
+                videoUrl = `${baseUrl}/${key}`;
+            } else if (process.env.S3_ENDPOINT && !process.env.S3_ENDPOINT.includes("amazonaws.com")) {
+                // Handle R2/DigitalOcean Custom Endpoints
+                const endpoint = process.env.S3_ENDPOINT.replace("https://", "").replace("http://", "");
+                videoUrl = `https://${BUCKET_NAME}.${endpoint}/${key}`;
+            } else {
+                // Default AWS S3 format
+                videoUrl = `https://${BUCKET_NAME}.s3.${CONFIG.S3.REGION}.amazonaws.com/${key}`;
+            }
+            console.log("🚀 [S3] Video uploaded successfully. URL:", videoUrl);
         }
 
         await connectDB();
