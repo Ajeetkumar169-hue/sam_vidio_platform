@@ -91,13 +91,25 @@ export function VideoCard({ video, compact, index = 10 }: VideoCardProps) {
   return (
     <Link href={`/watch/${videoId}`} className="group block">
       <div className={cn("overflow-hidden rounded-lg", compact ? "flex gap-3" : "flex flex-col")}>
-        {/* Thumbnail */}
+        {/* Thumbnail & Preview */}
         <div
           className={cn(
             "relative flex-shrink-0 overflow-hidden rounded-lg bg-secondary",
             compact ? "h-20 w-36" : "aspect-video w-full"
           )}
+          onMouseEnter={(e) => {
+            const videoEl = e.currentTarget.querySelector("video")
+            if (videoEl) videoEl.play().catch(() => {})
+          }}
+          onMouseLeave={(e) => {
+            const videoEl = e.currentTarget.querySelector("video")
+            if (videoEl) {
+              videoEl.pause()
+              videoEl.currentTime = 0
+            }
+          }}
         >
+          {/* Main Thumbnail Image */}
           {video.thumbnailUrl ? (
             <Image
               src={thumbnailUrl}
@@ -108,7 +120,7 @@ export function VideoCard({ video, compact, index = 10 }: VideoCardProps) {
               loading={isPriority ? "eager" : "lazy"}
               placeholder="blur"
               blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQwIiBoZWlnaHQ9IjM2MCIgdmlld0JveD0iMCAwIDY0MCAzNjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjY0MCIgaGVpZ2h0PSIzNjAiIGZpbGw9IiMyQTJBMkEiLz48L3N2Zz4="
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105 group-hover:opacity-0"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-secondary">
@@ -117,8 +129,18 @@ export function VideoCard({ video, compact, index = 10 }: VideoCardProps) {
               </span>
             </div>
           )}
+
+          {/* Hover Video Preview */}
+          <video
+            src={video.videoUrl}
+            muted
+            loop
+            playsInline
+            className="absolute inset-0 h-full w-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+          />
+
           {video.duration && (
-            <span className="absolute bottom-1.5 right-1.5 rounded bg-black/80 px-1.5 py-0.5 text-xs font-medium text-foreground">
+            <span className="absolute bottom-1.5 right-1.5 z-10 rounded bg-black/80 px-1.5 py-0.5 text-xs font-medium text-foreground">
               {typeof video.duration === "string" ? video.duration : formatDuration(video.duration)}
             </span>
           )}
