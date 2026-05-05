@@ -1,3 +1,8 @@
+import { NextRequest } from "next/server";
+import { UploadPartCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { s3AccelClient, BUCKET_NAME, MOCK_MODE } from "@/lib/s3-client";
+import { getCurrentUser } from "@/lib/auth";
 import { ApiResponse } from "@/lib/api-response";
 
 export async function POST(req: NextRequest) {
