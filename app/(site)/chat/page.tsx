@@ -193,11 +193,14 @@ export default function ChatPage() {
 
                     return (
                         <div key={msg._id} className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
-                            {/* Avatar & Name (Only show for others, and only on first message of group) */}
-                            {!isMe && isFirstInGroup && (
-                                <div className="flex items-center gap-2 mb-1 ml-1 mt-2">
+                            {/* Avatar & Name & ID */}
+                            {isFirstInGroup && (
+                                <div className={`flex items-center gap-2 mb-1 mt-2 ${isMe ? "flex-row-reverse mr-1" : "ml-1"}`}>
                                     <img src={msg.sender?.avatar || "/default-avatar.png"} className="h-5 w-5 rounded-full object-cover" alt="" />
-                                    <span className="text-[10px] font-bold text-muted-foreground">{msg.sender?.username || "Unknown"}</span>
+                                    <div className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
+                                        <span className="text-[10px] font-bold text-foreground/80">{msg.sender?.username || "Unknown"}</span>
+                                        <span className="text-[8px] font-mono text-muted-foreground bg-white/5 px-1 rounded">ID: {msg.sender?._id?.slice(-6) || "????"}</span>
+                                    </div>
                                 </div>
                             )}
 
