@@ -46,6 +46,7 @@ interface DashboardData {
     category?: { name: string }
     status: string
     processingProgress?: number
+    isShort?: boolean
   }[]
   stats: {
     totalVideos: number
@@ -186,80 +187,28 @@ export default function DashboardPage() {
       </div>
 
       <Tabs defaultValue="videos">
-        <TabsList className="mb-4">
-          <TabsTrigger value="videos">My Videos</TabsTrigger>
-          <TabsTrigger value="channel">Channel Settings</TabsTrigger>
+        <TabsList className="mb-4 bg-secondary/50 rounded-xl p-1 h-12">
+          <TabsTrigger value="videos" className="rounded-lg px-6 font-bold">My Videos</TabsTrigger>
+          <TabsTrigger value="softporn" className="rounded-lg px-6 font-bold flex items-center gap-2">
+            <Zap className="h-4 w-4" /> SoftPorn
+          </TabsTrigger>
+          <TabsTrigger value="channel" className="rounded-lg px-6 font-bold">Channel Settings</TabsTrigger>
         </TabsList>
 
         {/* Videos Tab */}
         <TabsContent value="videos">
-          {data.videos.length === 0 ? (
-            <div className="flex flex-col items-center gap-4 py-12 text-center">
-              <Film className="h-12 w-12 text-muted-foreground" />
-              <p className="text-muted-foreground">No videos uploaded yet</p>
-              <Link href="/upload">
-                <Button>Upload Your First Video</Button>
-              </Link>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {data.videos.map((video) => {
-                const videoId = (video as any)._id || (video as any).id
-                return (
-                  <div
-                    key={videoId}
-                    className="flex items-center gap-4 rounded-lg border border-border bg-card p-3"
-                  >
-                    <div className="h-16 w-28 flex-shrink-0 overflow-hidden rounded bg-secondary">
-                      {video.thumbnailUrl ? (
-                        <img src={video.thumbnailUrl} alt={video.title} className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                          <Film className="h-6 w-6" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <Link href={`/watch/${videoId}`}>
-                        <h3 className="truncate text-sm font-medium text-foreground hover:text-primary">
-                          {video.title}
-                        </h3>
-                      </Link>
-                      <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-                        <span>{video.views} views</span>
-                        {video.status !== "ready" && video.status !== "approved" && (
-                          <Badge variant={video.status === "failed" ? "destructive" : "secondary"} className="text-[10px] animate-pulse">
-                            {video.status === "processing" ? `Processing ${video.processingProgress || 0}%` : video.status}
-                          </Badge>
-                        )}
-                        <Badge variant="outline" className="text-xs">
-                          {video.visibility}
-                        </Badge>
-                        {video.category && (
-                          <Badge variant="secondary" className="text-xs">
-                            {video.category.name}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => router.push(`/watch/${videoId}`)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => handleDeleteVideo(videoId)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
+          <VideoList 
+            videos={data.videos.filter(v => !v.isShort && v.status !== "pending")} 
+            onDelete={handleDeleteVideo}
+          />
+        </TabsContent>
+
+        {/* SoftPorn Tab */}
+        <TabsContent value="softporn">
+          <VideoList 
+            videos={data.videos.filter(v => v.isShort && v.status !== "pending")} 
+            onDelete={handleDeleteVideo}
+          />
         </TabsContent>
 
         {/* Channel Settings Tab */}
@@ -311,3 +260,76 @@ function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string
     </Card>
   )
 }
+
+function VideoList({ videos, onDelete }: { videos: any[], onDelete: (id: string) => void }) {
+    const router = useRouter()
+    
+    if (videos.length === 0) {
+        return (
+            <div className="flex flex-col items-center gap-4 py-12 text-center grayscale opacity-50">
+                <Film className="h-12 w-12 text-muted-foreground" />
+                <p className="text-sm font-bold uppercase tracking-widest">No matching content found</p>
+            </div>
+        )
+    }
+
+    return (
+        <div className="flex flex-col gap-3">
+            {videos.map((video) => {
+                const videoId = video._id || video.id
+                return (
+                    <div
+                        key={videoId}
+                        className="flex items-center gap-4 rounded-xl border border-white/5 bg-secondary/20 p-4 transition-all hover:bg-secondary/30"
+                    >
+                        <div className="h-16 w-28 flex-shrink-0 overflow-hidden rounded-lg bg-secondary shadow-lg">
+                            {video.thumbnailUrl ? (
+                                <img src={video.thumbnailUrl} alt={video.title} className="h-full w-full object-cover" />
+                            ) : (
+                                <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                                    <Film className="h-6 w-6" />
+                                </div>
+                            )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <Link href={`/watch/${videoId}`}>
+                                <h3 className="truncate text-sm font-black text-foreground hover:text-primary uppercase tracking-tight">
+                                    {video.title}
+                                </h3>
+                            </Link>
+                            <div className="mt-1 flex flex-wrap items-center gap-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                                <span className="flex items-center gap-1.5"><Eye className="h-3.5 w-3.5 text-primary" /> {formatNumber(video.views)}</span>
+                                <span className="flex items-center gap-1.5"><ThumbsUp className="h-3.5 w-3.5 text-primary" /> {formatNumber(video.likes)}</span>
+                                <Badge variant="outline" className="text-[9px] border-white/10 px-2">
+                                    {video.visibility}
+                                </Badge>
+                                {video.category && (
+                                    <span className="text-primary/60">{video.category.name}</span>
+                                )}
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-10 w-10 rounded-full bg-white/5 hover:bg-white/10" 
+                                onClick={() => router.push(`/watch/${videoId}`)}
+                            >
+                                <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10 rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20"
+                                onClick={() => onDelete(videoId)}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+                )
+            })}
+        </div>
+    )
+}
+
