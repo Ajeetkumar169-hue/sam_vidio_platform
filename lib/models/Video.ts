@@ -27,6 +27,7 @@ export interface IVideo {
   qualities?: Array<{ label: string; url: string; size?: number }>
   storageType?: "cloudinary" | "s3" | "link"
   uploadId?: string // Idempotency key
+  isShort?: boolean // SoftPorn Shorts flag
   isDeleted?: boolean // Future-proofing
   channelName?: string
   channelAvatar?: string
@@ -62,6 +63,7 @@ const VideoSchema = new Schema<IVideo>(
     ],
     storageType: { type: String, enum: ["cloudinary", "s3", "link"], default: "s3" },
     uploadId: { type: String, unique: true, sparse: true },
+    isShort: { type: Boolean, default: false },
     isDeleted: { type: Boolean, default: false },
     channelName: { type: String },
     channelAvatar: { type: String },
@@ -71,6 +73,7 @@ const VideoSchema = new Schema<IVideo>(
 
 VideoSchema.index({ status: 1, isDeleted: 1, category: 1, createdAt: -1 })
 VideoSchema.index({ status: 1, isDeleted: 1, createdAt: -1, _id: -1 }) // Stable sort cursor index
+VideoSchema.index({ isShort: 1, status: 1, isDeleted: 1, createdAt: -1 })
 VideoSchema.index({ title: "text", tags: "text" }) // High-speed search index
 
 const Video: Model<IVideo> = mongoose.models.Video || mongoose.model<IVideo>("Video", VideoSchema)

@@ -19,6 +19,7 @@ export default function UploadPage() {
     const [isComplete, setIsComplete] = useState(false)
     const [uploadedVideo, setUploadedVideo] = useState<any>(null)
     const [loading, setLoading] = useState(false)
+    const [uploadType, setUploadType] = useState<"video" | "short">("video")
 
     // Form State
     const [formData, setFormData] = useState({
@@ -56,7 +57,10 @@ export default function UploadPage() {
             const res = await fetch("/api/videos", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData)
+                body: JSON.stringify({
+                    ...formData,
+                    isShort: uploadType === "short"
+                })
             })
             const result = await res.json()
             if (result.success) {
@@ -117,11 +121,32 @@ export default function UploadPage() {
                                     </TabsTrigger>
                                 </TabsList>
 
+                                {/* Type Selection: Video vs Short */}
+                                <div className="flex justify-center gap-4">
+                                    <Button 
+                                        variant={uploadType === "video" ? "default" : "outline"} 
+                                        className={cn("rounded-2xl h-12 px-8 font-bold", uploadType === "video" ? "shadow-lg shadow-primary/20" : "opacity-60")}
+                                        onClick={() => setUploadType("video")}
+                                    >
+                                        Videos
+                                    </Button>
+                                    <Button 
+                                        variant={uploadType === "short" ? "default" : "outline"} 
+                                        className={cn("rounded-2xl h-12 px-8 font-bold", uploadType === "short" ? "shadow-lg shadow-primary/20" : "opacity-60")}
+                                        onClick={() => setUploadType("short")}
+                                    >
+                                        SoftPorn (Shorts)
+                                    </Button>
+                                </div>
+
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                                     <div className="space-y-6">
                                         <TabsContent value="device" className="mt-0">
                                             <S3TurboUploader 
-                                                metadata={formData}
+                                                metadata={{
+                                                    ...formData,
+                                                    isShort: uploadType === "short"
+                                                }}
                                                 onFileSelected={(file) => handleFormChange("title", file?.name.split(".")[0] || "")}
                                                 onUploadComplete={(video) => {
                                                     setUploadedVideo(video)
@@ -159,11 +184,47 @@ export default function UploadPage() {
                                     </div>
 
                                     <div className="space-y-6">
-                                        <VideoMetadataForm 
-                                            data={formData}
-                                            categories={categories}
-                                            onChange={handleFormChange}
-                                        />
+                                        {uploadType === "video" ? (
+                                            <VideoMetadataForm 
+                                                data={formData}
+                                                categories={categories}
+                                                onChange={handleFormChange}
+                                            />
+                                        ) : (
+                                            <div className="space-y-4 bg-secondary/20 p-6 rounded-3xl border border-white/5">
+                                                <p className="text-sm font-black uppercase tracking-widest text-primary mb-2">Short Metadata</p>
+                                                <div className="space-y-2">
+                                                    <label className="text-xs font-bold opacity-50 uppercase">Title</label>
+                                                    <input 
+                                                        className="w-full h-12 px-4 bg-secondary/30 border-none rounded-xl focus:ring-1 focus:ring-primary"
+                                                        placeholder="Short Title..."
+                                                        value={formData.title}
+                                                        onChange={(e) => handleFormChange("title", e.target.value)}
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-xs font-bold opacity-50 uppercase">Description</label>
+                                                    <textarea 
+                                                        className="w-full min-h-[100px] p-4 bg-secondary/30 border-none rounded-xl focus:ring-1 focus:ring-primary"
+                                                        placeholder="Tell us about this short..."
+                                                        value={formData.description}
+                                                        onChange={(e) => handleFormChange("description", e.target.value)}
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-xs font-bold opacity-50 uppercase">Visibility</label>
+                                                    <select 
+                                                        className="w-full h-12 px-4 bg-secondary/30 border-none rounded-xl focus:ring-1 focus:ring-primary"
+                                                        value={formData.visibility}
+                                                        onChange={(e) => handleFormChange("visibility", e.target.value)}
+                                                    >
+                                                        <option value="public">Public</option>
+                                                        <option value="private">Private</option>
+                                                        <option value="unlisted">Unlisted</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        )}
                                         <div className="pt-4 flex flex-col gap-3">
                                             <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold text-center">
                                                 * Title and Category are required

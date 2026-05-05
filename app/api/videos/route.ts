@@ -23,10 +23,12 @@ export async function GET(req: NextRequest) {
     const featured = searchParams.get("featured")
     const limit = Math.min(parseInt(searchParams.get("limit") || "20"), 100)
     const search = searchParams.get("search")
+    const isShort = searchParams.get("isShort") === "true"
 
     const query: any = { 
       status: { $in: ["approved", "pending"] }, 
-      isDeleted: { $ne: true } 
+      isDeleted: { $ne: true },
+      isShort: isShort
     }
     
     if (category) query.category = category
@@ -78,7 +80,7 @@ export async function POST(req: NextRequest) {
     if (!user) return ApiResponse.unauthorized()
 
     const body = await req.json()
-    const { title, description, videoUrl, categoryId, thumbnailUrl, visibility, tags } = body
+    const { title, description, videoUrl, categoryId, thumbnailUrl, visibility, tags, isShort } = body
 
     if (!title || !videoUrl) {
         return ApiResponse.badRequest("Title and Video URL are required");
@@ -111,6 +113,7 @@ export async function POST(req: NextRequest) {
         visibility: visibility || "public",
         status: "approved", // Link-based videos are auto-approved for simplicity
         uploadId: idempotencyKey,
+        isShort: !!isShort,
         channelName: channel.name,
         channelAvatar: channel.logo || ""
       };

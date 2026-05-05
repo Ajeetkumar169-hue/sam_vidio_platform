@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth-context"
 import { cn } from "@/lib/utils"
 import {
   Home,
-  TrendingUp,
+  Zap,
   Clock,
   ThumbsUp,
   Grid3X3,
@@ -59,7 +59,7 @@ export function AppSidebar({ open, pinned, onTogglePin, onClose, onMouseEnter, o
 
   const mainLinks = [
     { href: "/", label: "Home", icon: Home },
-    { href: "/trending", label: "Trending", icon: TrendingUp },
+    { href: "/softporn", label: "SoftPorn", icon: Zap },
     { href: "/latest", label: "Latest", icon: Clock },
     { href: "/top-rated", label: "Top Rated", icon: ThumbsUp },
     { href: "/categories", label: "All Categories", icon: Grid3X3 },

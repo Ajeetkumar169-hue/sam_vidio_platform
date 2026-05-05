@@ -118,7 +118,8 @@ export async function POST(req: NextRequest) {
                 processingProgress: 100,
                 filePublicId: key,
                 storageSize: metadata.fileSize || 0,
-                uploadId: uploadId
+                uploadId: uploadId,
+                isShort: !!metadata.isShort
             };
 
             const VideoModel = (await import("@/lib/models/Video")).default;
