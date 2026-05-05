@@ -23,6 +23,7 @@ import {
   Loader2,
   Trash2,
   Edit,
+  Zap,
 } from "lucide-react"
 
 interface DashboardData {
