@@ -1,69 +1,71 @@
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { verifyAuthToken } from "./lib/edge-auth";
 
-// Simple in-memory rate limiter for Edge Runtime
-// Note: In a distributed edge deployment, this Map is specific to the current isolate.
-// For true global rate-limiting across all edges, upgrading to Redis (Upstash) is recommended.
-const rateLimitMap = new Map<string, { count: number; lastReset: number }>()
+/**
+ * 🛡️ GLOBAL ARCHITECTURE PROXY (Next.js 16+)
+ * Replaces middleware.ts for route protection, security headers, and rate limiting.
+ */
 
-const WINDOW_MS = 15 * 60 * 1000 // 15 minutes
-const MAX_REQUESTS_NORMAL = 100
+const PROTECTED_ROUTES = ["/admin", "/upload", "/studio", "/profile", "/settings"];
+const ADMIN_ROUTES = ["/admin"];
 
-const AUTH_WINDOW_MS = 5 * 60 * 1000 // 5 minutes
-const MAX_REQUESTS_AUTH = 10
+// Simple in-memory rate limiter (Isolate-specific)
+const rateLimitMap = new Map<string, { count: number; lastReset: number }>();
 
-export function proxy(request: NextRequest) {
-  const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1"
-  const path = request.nextUrl.pathname
+export async function proxy(request: NextRequest) {
+    const { pathname } = request.nextUrl;
+    const token = request.cookies.get("auth-token")?.value;
 
-  // Rate limiting disabled for current development session as requested
-  /*
-  if (path.startsWith("/api/")) {
-    const isAuthRoute = path.startsWith("/api/auth/")
-    const limit = isAuthRoute ? MAX_REQUESTS_AUTH : MAX_REQUESTS_NORMAL
-    const windowMs = isAuthRoute ? AUTH_WINDOW_MS : WINDOW_MS
-    
-    // Create specific IP-route grouping key
-    const key = `${ip}-${isAuthRoute ? 'auth' : 'api'}`
-    const now = Date.now()
-    
-    const record = rateLimitMap.get(key)
-    
-    if (!record) {
-      rateLimitMap.set(key, { count: 1, lastReset: now })
-    } else {
-      if (now - record.lastReset > windowMs) {
-        // Reset rate window
-        rateLimitMap.set(key, { count: 1, lastReset: now })
-      } else {
-        record.count += 1
-        if (record.count > limit) {
-          const retryAfterSeconds = Math.ceil((windowMs - (now - record.lastReset)) / 1000)
-          return NextResponse.json(
-            { error: "Too many requests. Please slow down and try again later." },
-            { 
-                status: 429, 
-                headers: { 
-                    "Retry-After": retryAfterSeconds.toString(),
-                    "X-RateLimit-Limit": limit.toString(),
-                    "X-RateLimit-Remaining": "0"
-                } 
-            }
-          )
+    // 1. Auth Protection Logic
+    const isProtected = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
+    const isAdminOnly = ADMIN_ROUTES.some(route => pathname.startsWith(route));
+
+    if (isProtected) {
+        if (!token) {
+            const loginUrl = new URL("/login", request.url);
+            loginUrl.searchParams.set("callbackUrl", pathname);
+            return NextResponse.redirect(loginUrl);
         }
-      }
+
+        const payload = await verifyAuthToken(token);
+        if (!payload) {
+            const response = NextResponse.redirect(new URL("/login", request.url));
+            response.cookies.delete("auth-token");
+            return response;
+        }
+
+        // 2. Admin Check
+        if (isAdminOnly && payload.role !== "admin") {
+            return NextResponse.redirect(new URL("/", request.url));
+        }
     }
-  }
-  */
 
-  const response = NextResponse.next()
+    // 3. API Protection
+    if (pathname.startsWith("/api/admin") && !token) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  // Add Dynamic Browser Protections globally
-  response.headers.set('X-XSS-Protection', '1; mode=block')
-  
-  return response
+    const response = NextResponse.next();
+
+    // 4. Security Headers
+    response.headers.set("X-Frame-Options", "DENY");
+    response.headers.set("X-Content-Type-Options", "nosniff");
+    response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+    response.headers.set("X-XSS-Protection", "1; mode=block");
+
+    return response;
 }
 
 export const config = {
-  matcher: '/api/:path*',
-}
+    matcher: [
+        /*
+         * Match all request paths except for the ones starting with:
+         * - _next/static (static files)
+         * - _next/image (image optimization files)
+         * - favicon.ico (favicon file)
+         * - public (public files)
+         */
+        "/((?!_next/static|_next/image|favicon.ico|public).*)",
+    ],
+};

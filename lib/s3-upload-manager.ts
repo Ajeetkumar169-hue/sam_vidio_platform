@@ -101,7 +101,7 @@ export class S3UploadManager {
                     fileSize: this.file.size
                 })
             });
-            const data = await res.json();
+            const { data } = await res.json();
             this.uploadId = data.uploadId;
             this.key = data.key;
             await this.saveSession();
@@ -204,7 +204,8 @@ export class S3UploadManager {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ key: this.key, uploadId: this.uploadId, partNumber })
             });
-            const { url } = await res.json();
+            const { data } = await res.json();
+            const url = data.url;
 
             const start = (partNumber - 1) * this.chunkSize;
             const end = Math.min(start + this.chunkSize, this.file.size);
@@ -228,13 +229,13 @@ export class S3UploadManager {
                 metadata: { ...metadata, fileSize: this.file.size }
             })
         });
-        const final = await res.json();
-        if (final.error) throw new Error(final.error);
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || "Completion failed");
         
         this.status = 'complete';
         this.emitProgress({ message: "Global Ingestion Successful! 🥂" });
         await idbDelete(this.getSessionKey());
-        return final;
+        return json.data;
     }
 
     private async saveSession() {

@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest } from "next/server"
 import connectDB from "@/lib/db"
 import Category from "@/lib/models/Category"
 import { getCurrentUser } from "@/lib/auth"
+import { ApiResponse } from "@/lib/api-response"
 
 export const dynamic = 'force-dynamic'
 
@@ -32,15 +33,14 @@ export async function GET() {
       categories = await Category.find().sort({ name: 1 }).lean()
     }
 
-    return NextResponse.json({ 
-      categories: categories.map(c => ({
+    return ApiResponse.success({ 
+      categories: categories.map((c: any) => ({
         ...c,
         id: c._id.toString()
       }))
     })
   } catch (error: any) {
-    console.error("❌ Categories fetch error:", error)
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 })
+    return ApiResponse.error(error.message);
   }
 }
 
@@ -50,11 +50,11 @@ export async function POST(req: NextRequest) {
     const user = await getCurrentUser()
     
     if (!user || user.role !== "admin") {
-      return NextResponse.json({ error: "Admin only" }, { status: 403 })
+      return ApiResponse.unauthorized("Admin only");
     }
 
     const { name, description, thumbnail } = await req.json()
-    if (!name) return NextResponse.json({ error: "Name required" }, { status: 400 })
+    if (!name) return ApiResponse.badRequest("Name required");
 
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
     
@@ -66,14 +66,13 @@ export async function POST(req: NextRequest) {
       videoCount: 0 
     })
 
-    return NextResponse.json({ 
+    return ApiResponse.success({ 
       category: {
         ...category.toObject(),
         id: category._id.toString()
       } 
-    }, { status: 201 })
+    }, "Category created successfully", 201)
   } catch (error: any) {
-    console.error("❌ Category create error:", error)
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 })
+    return ApiResponse.error(error.message);
   }
 }

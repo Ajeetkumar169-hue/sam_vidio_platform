@@ -1,8 +1,9 @@
 import mongoose, { Schema, Document, Model } from "mongoose"
 
-// Ensure Category and Channel models are registered if they are used as refs
+// Ensure related models are registered if they are used as refs
 import "./Category"
 import "./Channel"
+import "./User"
 
 export interface IVideo {
   _id: mongoose.Types.ObjectId

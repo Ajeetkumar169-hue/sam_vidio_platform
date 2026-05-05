@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { ApiResponse } from "@/lib/api-response";
 import { v2 as cloudinary } from "cloudinary";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -11,9 +11,7 @@ cloudinary.config({
 export async function POST() {
     try {
         const user = await getCurrentUser();
-        if (!user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+        if (!user) return ApiResponse.unauthorized();
 
         const timestamp = Math.round(new Date().getTime() / 1000);
         const signature = cloudinary.utils.api_sign_request(
@@ -23,13 +21,13 @@ export async function POST() {
             process.env.CLOUDINARY_API_SECRET!
         );
 
-        return NextResponse.json({
+        return ApiResponse.success({
             signature,
             timestamp,
             cloudName: process.env.CLOUDINARY_CLOUD_NAME,
             apiKey: process.env.CLOUDINARY_API_KEY,
         });
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return ApiResponse.error(error.message);
     }
 }

@@ -126,3 +126,35 @@ export async function POST(req: NextRequest) {
         return ApiResponse.error(error.message, 500, error);
     }
 }
+
+/**
+ * ⚡ EARLY PIPELINE SIGNALING (PATCH)
+ * Called by the uploader to signal that enough data has been ingested to begin
+ * pre-processing or to update the UI status.
+ */
+export async function PATCH(req: NextRequest) {
+    try {
+        const user = await getCurrentUser();
+        if (!user) return ApiResponse.unauthorized();
+
+        const { uploadId, status } = await req.json();
+
+        if (!uploadId) return ApiResponse.badRequest("Missing uploadId");
+
+        console.log(`🎬 [PIPELINE SIGNAL] Upload ${uploadId} status updated to: ${status}`);
+
+        // We don't create the record yet if it doesn't exist, 
+        // as we lack essential metadata like title/description.
+        // But we can update if it already exists (e.g. resumption cases).
+        await connectDB();
+        const VideoModel = (await import("@/lib/models/Video")).default;
+        await VideoModel.findOneAndUpdate(
+            { uploadId: uploadId },
+            { status: status || "processing" }
+        );
+
+        return ApiResponse.success(null, "Pipeline signal received");
+    } catch (error: any) {
+        return ApiResponse.error(error.message);
+    }
+}
