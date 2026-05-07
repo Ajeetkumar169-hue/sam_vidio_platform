@@ -18,7 +18,7 @@ const themes = [
   { id: "pink", name: "Luxury Pink", color: "#ffc0cb" },
 ]
 
-export function ThemeSwitcher() {
+export function ThemeSwitcher({ variant = "dropdown" }: { variant?: "dropdown" | "inline" }) {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = React.useState(false)
 
@@ -27,6 +27,41 @@ export function ThemeSwitcher() {
   }, [])
 
   if (!mounted) return null
+
+  if (variant === "inline") {
+    return (
+      <div className="space-y-3">
+        {themes.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTheme(t.id)}
+            className={cn(
+              "w-full flex items-center justify-between gap-3 p-4 rounded-2xl transition-all duration-300 border",
+              theme === t.id 
+                ? "bg-primary/10 border-primary/20 text-primary shadow-lg shadow-primary/5" 
+                : "bg-foreground/[0.02] border-transparent hover:bg-foreground/[0.05] text-muted-foreground"
+            )}
+          >
+            <div className="flex items-center gap-4">
+              <div 
+                className={cn(
+                  "w-6 h-6 rounded-full border-2",
+                  theme === t.id ? "border-primary/50" : "border-white/10"
+                )}
+                style={{ backgroundColor: t.color }}
+              />
+              <span className="font-bold text-sm">{t.name}</span>
+            </div>
+            {theme === t.id && (
+              <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-sm">
+                <Check className="h-3 w-3 stroke-[3]" />
+              </div>
+            )}
+          </button>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <DropdownMenu>

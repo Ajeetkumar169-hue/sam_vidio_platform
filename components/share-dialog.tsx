@@ -20,9 +20,10 @@ interface ShareDialogProps {
   title: string
   description?: string
   className?: string
+  trigger?: React.ReactNode
 }
 
-export function ShareDialog({ videoId, title, description = "", className }: ShareDialogProps) {
+export function ShareDialog({ videoId, title, description = "", className, trigger }: ShareDialogProps) {
   const [copied, setCopied] = useState(false)
   const [open, setOpen] = useState(false)
 
@@ -93,15 +94,21 @@ export function ShareDialog({ videoId, title, description = "", className }: Sha
 
   return (
     <>
-      <Button 
-        variant="outline" 
-        size="sm" 
-        className={cn("gap-2 w-full sm:w-auto active-bounce", className)} 
-        onClick={handleNativeShare}
-      >
-        <Share2 className="h-4 w-4" />
-        Share
-      </Button>
+      {trigger ? (
+        <div onClick={handleNativeShare} className="cursor-pointer">
+          {trigger}
+        </div>
+      ) : (
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className={cn("gap-2 w-full sm:w-auto active-bounce", className)} 
+          onClick={handleNativeShare}
+        >
+          <Share2 className="h-4 w-4" />
+          Share
+        </Button>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md glass-panel rounded-3xl border-foreground/5 p-8">

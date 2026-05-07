@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useAuth } from "@/lib/auth-context"
-import { Users, Tv2, Search, ExternalLink } from "lucide-react"
+import { Users, Tv2, Search, ExternalLink, Bell, ChevronDown } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -16,9 +16,16 @@ interface Subscription {
     slug: string
     logo: string
     banner: string
+    description: string
     subscriberCount: number
     videoCount: number
   }
+}
+
+function formatNumber(n: number): string {
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`
+  return n.toString()
 }
 
 export default function SubscriptionsPage() {
@@ -132,50 +139,58 @@ export default function SubscriptionsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+      <div className="space-y-6">
         {subscriptions.map((sub) => (
-          <div key={sub._id} className="group relative flex flex-col bg-card/40 border border-white/5 rounded-2xl overflow-hidden hover:bg-card/60 transition-all duration-500 hover:border-primary/20 hover:shadow-2xl hover:shadow-primary/5 luxury-easing">
-             {/* Channel Banner/Placeholder */}
-             <div className="h-16 w-full bg-gradient-to-br from-primary/20 to-secondary/10 overflow-hidden">
-                {sub.channel.banner && (
-                    <img src={sub.channel.banner} alt="" className="w-full h-full object-cover opacity-50 transition-transform duration-700 group-hover:scale-110" />
-                )}
-             </div>
-
-             <div className="px-4 pb-4 flex flex-col items-center -mt-7">
-                <div className="h-14 w-14 rounded-full border-[3px] border-background bg-background p-0.5 mb-3 shadow-xl">
+          <div key={sub._id} className="group flex flex-col sm:flex-row items-center sm:items-start gap-6 p-6 rounded-[2.5rem] bg-foreground/[0.02] border border-white/5 hover:bg-foreground/[0.04] transition-all duration-500 luxury-easing">
+             {/* Large Avatar */}
+             <Link href={`/channel/${sub.channel.slug}`} className="shrink-0">
+                <div className="h-24 w-24 sm:h-32 sm:w-32 rounded-full border-4 border-background bg-secondary shadow-2xl overflow-hidden transition-transform duration-500 group-hover:scale-105">
                     {sub.channel.logo ? (
-                        <img src={sub.channel.logo} alt="" className="h-full w-full rounded-full object-cover" />
+                        <img src={sub.channel.logo} alt="" className="h-full w-full object-cover" />
                     ) : (
-                        <div className="h-full w-full rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-lg">
+                        <div className="h-full w-full flex items-center justify-center text-3xl font-black text-primary/40 bg-primary/5">
                             {sub.channel.name.charAt(0).toUpperCase()}
                         </div>
                     )}
                 </div>
+             </Link>
 
-                <div className="text-center mb-4">
-                    <h3 className="text-sm font-bold truncate max-w-[120px] sm:max-w-[140px] mb-0.5">{sub.channel.name}</h3>
-                    <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-black opacity-40 truncate max-w-[120px]">@{sub.channel.slug}</p>
+             {/* Channel Details */}
+             <div className="flex-1 flex flex-col items-center sm:items-start text-center sm:text-left min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1">
+                    <h3 className="text-xl font-black text-foreground tracking-tight">{sub.channel.name}</h3>
+                </div>
+                
+                <div className="flex items-center gap-3 text-xs font-bold text-muted-foreground/60 uppercase tracking-widest mb-3">
+                    <span>@{sub.channel.slug}</span>
+                    <span className="h-1 w-1 rounded-full bg-foreground/20" />
+                    <span>{formatNumber(sub.channel.subscriberCount || 0)} subscribers</span>
                 </div>
 
-                <div className="flex items-center justify-around w-full mb-4 py-2 border-y border-white/5">
-                    <div className="text-center">
-                        <p className="text-xs font-black text-foreground">{sub.channel.subscriberCount?.toLocaleString() || 0}</p>
-                        <p className="text-[8px] text-muted-foreground uppercase font-bold tracking-tighter">Subs</p>
-                    </div>
-                    <div className="h-4 w-px bg-white/5" />
-                    <div className="text-center">
-                        <p className="text-xs font-black text-foreground">{sub.channel.videoCount?.toLocaleString() || 0}</p>
-                        <p className="text-[8px] text-muted-foreground uppercase font-bold tracking-tighter">Videos</p>
-                    </div>
-                </div>
+                {sub.channel.description && (
+                    <p className="text-sm text-muted-foreground/80 line-clamp-2 max-w-2xl mb-4 leading-relaxed">
+                        {sub.channel.description}
+                    </p>
+                )}
 
-                <Link href={`/channel/${sub.channel.slug}`} className="w-full">
-                    <Button variant="outline" className="w-full h-8 text-xs rounded-lg glass-light border-white/10 hover:bg-white/5 gap-2 group/btn">
-                        <ExternalLink className="h-3 w-3 transition-transform group-hover/btn:scale-110" />
-                        Visit
-                    </Button>
-                </Link>
+                <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.2em] text-foreground/20">
+                    <span className="flex items-center gap-2">
+                        <Tv2 className="h-3 w-3 text-primary" />
+                        {sub.channel.videoCount || 0} Videos
+                    </span>
+                </div>
+             </div>
+
+             {/* Action Button (Subscribed) */}
+             <div className="shrink-0 self-center">
+                <Button 
+                    variant="outline" 
+                    className="h-12 px-6 rounded-full border-white/10 bg-white/5 hover:bg-white/10 gap-3 group/btn transition-all"
+                >
+                    <Bell className="h-4 w-4 text-primary group-hover/btn:animate-bounce" />
+                    <span className="font-bold uppercase tracking-widest text-xs">Subscribed</span>
+                    <ChevronDown className="h-4 w-4 opacity-40" />
+                </Button>
              </div>
           </div>
         ))}

@@ -75,6 +75,7 @@ export function WatchView({ initialVideo }: WatchViewProps) {
   const [disliked, setDisliked] = useState(false)
   const [likeCount, setLikeCount] = useState(initialVideo.likes || 0)
   const [dislikeCount, setDislikeCount] = useState(initialVideo.dislikes || 0)
+  const [isSubscribed, setIsSubscribed] = useState(false)
 
   useEffect(() => {
     async function loadRelated() {
@@ -219,9 +220,9 @@ export function WatchView({ initialVideo }: WatchViewProps) {
               </div>
 
               {/* Actions System */}
-              <div className="mt-4 flex flex-col items-end gap-3 px-4 sm:px-0">
+              <div className="mt-4 flex flex-col items-start sm:items-end gap-3 px-4 sm:px-0">
                 {/* Row 1: Like, Dislike, Delete, Download */}
-                <div className="flex flex-wrap items-center justify-end gap-2 w-full">
+                <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2 w-full">
                   {/* Like/Dislike Group */}
                   <div className="flex items-center rounded-full bg-secondary p-1 flex-shrink-0">
                     <Button
@@ -268,14 +269,14 @@ export function WatchView({ initialVideo }: WatchViewProps) {
                 </div>
 
                 {/* Row 2: Share Button (Aligned Right) */}
-                <div className="flex justify-end w-full">
+                <div className="flex justify-start sm:justify-end w-full">
                   <ShareDialog videoId={videoId} title={video.title} description={video.description} />
                 </div>
               </div>
             </div>
 
             {/* Channel Info */}
-            {video.channel && (
+            {video.channel && !isSubscribed && (
               <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between justify-center rounded-lg bg-secondary p-3">
                 <Link
                   href={`/channel/${video.channel.slug}`}
@@ -296,6 +297,7 @@ export function WatchView({ initialVideo }: WatchViewProps) {
                   channelSlug={video.channel.slug} 
                   initialSubscriberCount={video.channel.subscriberCount}
                   className="w-full sm:w-auto"
+                  onStatusChange={(status) => setIsSubscribed(status)}
                 />
               </div>
             )}

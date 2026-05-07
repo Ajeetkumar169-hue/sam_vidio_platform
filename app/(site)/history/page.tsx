@@ -233,7 +233,7 @@ export default function HistoryPage() {
                                     <MoreVertical className="h-5 w-5" />
                                  </button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-56 bg-zinc-900 border-white/10 rounded-xl p-1 shadow-2xl">
+                              <DropdownMenuContent align="end" className="w-56 glass-heavy border-white/10 rounded-xl p-1 shadow-2xl">
                                  <DropdownMenuItem 
                                    className="flex items-center gap-3 py-2.5 rounded-lg cursor-pointer focus:bg-white/10"
                                    onClick={() => handleDownload(item.video)}

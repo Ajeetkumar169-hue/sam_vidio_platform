@@ -16,6 +16,8 @@ interface SubscribeButtonProps {
   size?: "default" | "sm" | "lg" | "icon"
   className?: string
   showCount?: boolean
+  hideIfSubscribed?: boolean
+  onStatusChange?: (isSubscribed: boolean) => void
 }
 
 export function SubscribeButton({
@@ -25,7 +27,9 @@ export function SubscribeButton({
   variant,
   size = "default",
   className,
-  showCount = true
+  showCount = true,
+  hideIfSubscribed = false,
+  onStatusChange
 }: SubscribeButtonProps) {
   const { user } = useAuth()
   const router = useRouter()
@@ -42,6 +46,7 @@ export function SubscribeButton({
         .then((r) => r.json())
         .then((d) => {
           setIsSubscribed(d.subscribed)
+          onStatusChange?.(d.subscribed)
         })
         .catch(() => {})
         .finally(() => setIsChecking(false))
@@ -49,6 +54,9 @@ export function SubscribeButton({
       setIsChecking(false)
     }
   }, [user, channelSlug])
+
+  if (hideIfSubscribed && isSubscribed) return null
+
 
   const handleToggle = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault()
@@ -71,6 +79,7 @@ export function SubscribeButton({
       
       if (res.ok) {
         setIsSubscribed(data.subscribed)
+        onStatusChange?.(data.subscribed)
         toast.success(data.subscribed ? "Subscribed!" : "Unsubscribed")
       } else {
         throw new Error(data.error)

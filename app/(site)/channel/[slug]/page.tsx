@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 import { Users, Film, Calendar, Camera } from "lucide-react"
 import { BrandUpload } from "@/components/brand-upload"
+import { ChannelSettingsDialog } from "@/components/channel-settings-dialog"
 import { cn } from "@/lib/utils"
 
 interface ChannelData {
@@ -211,10 +212,12 @@ export default function ChannelPage() {
               {subscribed ? "Subscribed" : "Subscribe"}
             </Button>
           )}
+
           {isOwner && (
-            <Button variant="outline" onClick={() => router.push("/dashboard")} className="w-full sm:w-auto mt-2 sm:mt-0">
-              Manage Channel
-            </Button>
+            <ChannelSettingsDialog 
+              channel={channel} 
+              onUpdate={(updated) => setChannel(updated)} 
+            />
           )}
         </div>
 

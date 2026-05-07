@@ -70,7 +70,7 @@ export function AppSidebar({ open, pinned, onTogglePin, onClose, onMouseEnter, o
 
   const userLinks = user
     ? [
-      { href: "/subscriptions/videos", label: "Subscriptions", icon: Users },
+      { href: "/subscriptions", label: "Subscriptions", icon: Users },
       { href: "/history", label: "History", icon: History },
       { href: `/channel/${user.channel?.slug || user.username}`, label: "My Channel", icon: Film },
       { href: "/upload", label: "Upload Video", icon: Upload },

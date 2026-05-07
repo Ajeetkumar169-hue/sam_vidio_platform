@@ -155,7 +155,7 @@ export default function SettingsPage() {
                 <CardTitle className="text-xl font-bold text-foreground">Appearance</CardTitle>
               </CardHeader>
               <CardContent className="p-6 sm:p-8 pt-0">
-                <ThemeSwitcher />
+                <ThemeSwitcher variant="inline" />
               </CardContent>
             </Card>
 

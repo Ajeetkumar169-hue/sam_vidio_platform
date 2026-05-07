@@ -193,7 +193,6 @@ export default function DashboardPage() {
           <TabsTrigger value="softporn" className="rounded-lg px-6 font-bold flex items-center gap-2">
             <Zap className="h-4 w-4" /> SoftPorn
           </TabsTrigger>
-          <TabsTrigger value="channel" className="rounded-lg px-6 font-bold">Channel Settings</TabsTrigger>
         </TabsList>
 
         {/* Videos Tab */}
@@ -212,35 +211,7 @@ export default function DashboardPage() {
           />
         </TabsContent>
 
-        {/* Channel Settings Tab */}
-        <TabsContent value="channel">
-          <Card className="border-border bg-card">
-            <CardHeader>
-              <CardTitle className="text-foreground">Channel Settings</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <Label>Channel Name</Label>
-                <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="bg-secondary" />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label>Description</Label>
-                <Textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={4} className="bg-secondary" />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label>Logo URL</Label>
-                <Input value={editLogo} onChange={(e) => setEditLogo(e.target.value)} placeholder="https://..." className="bg-secondary" />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label>Banner URL</Label>
-                <Input value={editBanner} onChange={(e) => setEditBanner(e.target.value)} placeholder="https://..." className="bg-secondary" />
-              </div>
-              <Button onClick={handleSaveChannel} disabled={saving} className="w-fit">
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Changes"}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
+
       </Tabs>
     </div>
   )

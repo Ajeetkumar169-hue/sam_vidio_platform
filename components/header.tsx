@@ -20,7 +20,6 @@ interface HeaderProps {
   onMenuClick: () => void
 }
 
-import { ThemeSwitcher } from "@/components/theme-switcher"
 
 export function Header({ onMenuClick }: HeaderProps) {
   const { user, logout } = useAuth()
@@ -138,7 +137,6 @@ export function Header({ onMenuClick }: HeaderProps) {
                 <Upload className="h-5 w-5" />
               </Button>
             </Link>
-            <ThemeSwitcher />
 
             {/* Notification Bell */}
             <DropdownMenu>

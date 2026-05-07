@@ -105,9 +105,9 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
             <section className="space-y-4">
               <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground/40 px-1">Discover</h3>
               <nav className="grid grid-cols-2 gap-2">
-                 <Link href="/trending" className="flex flex-col items-center gap-2 p-4 rounded-2xl glass-light hover:bg-foreground/5 transition-all text-center">
-                    <TrendingUp className="h-5 w-5 text-primary" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-foreground">Trending</span>
+                  <Link href="/subscriptions" className="flex flex-col items-center gap-2 p-4 rounded-2xl glass-light hover:bg-foreground/5 transition-all text-center">
+                    <Users className="h-5 w-5 text-primary" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-foreground">Subscriptions</span>
                  </Link>
                  <Link href="/latest" className="flex flex-col items-center gap-2 p-4 rounded-2xl glass-light hover:bg-foreground/5 transition-all text-center">
                     <Clock className="h-5 w-5 text-primary" />

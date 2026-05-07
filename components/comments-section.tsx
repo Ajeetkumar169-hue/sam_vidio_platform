@@ -151,12 +151,12 @@ export function CommentsSection({ videoId }: { videoId: string }) {
             return (
             <div key={commentId} className="flex gap-3">
               <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-bold text-foreground">
-                {comment.user.username.charAt(0).toUpperCase()}
+                {comment.user?.username?.charAt(0).toUpperCase() || "?"}
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-foreground">
-                    {comment.user.username}
+                    {comment.user?.username || "Anonymous"}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {mounted ? timeAgo(comment.createdAt) : "• • •"}

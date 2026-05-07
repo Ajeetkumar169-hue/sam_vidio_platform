@@ -139,25 +139,48 @@ export async function POST(req: NextRequest) {
       return videoResult.value;
     });
 
-    // 🚀 ASYNC NOTIFICATION FAN-OUT
+    // 🚀 ASYNC NOTIFICATION FAN-OUT (In-App + Email)
     if (result) {
         (async () => {
             try {
                 const { Subscription } = await import("@/lib/models/Interaction")
                 const NotificationModel = (await import("@/lib/models/Notification")).default
-                const subscribers = await Subscription.find({ channel: result.channel }).select("subscriber").lean()
+                const { sendNotificationEmail } = await import("@/lib/mail")
+                
+                // Fetch subscribers with their emails
+                const subscribers = await Subscription.find({ channel: result.channel })
+                  .populate("subscriber", "email username")
+                  .lean()
                 
                 if (subscribers?.length > 0) {
+                    // 1. Send In-App Notifications
                     await NotificationModel.insertMany(
                         subscribers.map((s: any) => ({
-                            recipient: s.subscriber,
+                            recipient: s.subscriber._id || s.subscriber,
                             actor: result.channel,
                             video: result._id,
                             type: "upload",
-                            meta: { title: result.title, thumbnail: result.thumbnailUrl }
+                            meta: { title: result.title, thumbnail: result.thumbnailUrl, channelName: result.channelName }
                         })),
                         { ordered: false }
-                    )
+                    ).catch(e => console.error("In-app notification batch failed:", e))
+
+                    // 2. Send Email Notifications
+                    const videoUrl = `${CONFIG.APP_URL}/watch/${result._id}`
+                    
+                    // We do this in parallel but limit concurrency if needed. For now, Promise.all is fine for smaller sub counts.
+                    Promise.all(subscribers.map(async (s: any) => {
+                      if (s.subscriber?.email) {
+                        return sendNotificationEmail({
+                          to: s.subscriber.email,
+                          subject: `New video from ${result.channelName || "Channel"}: ${result.title || "Video"}`,
+                          channelName: result.channelName || "Channel",
+                          videoTitle: result.title || "New Video",
+                          videoUrl: videoUrl,
+                          thumbnailUrl: result.thumbnailUrl
+                        })
+                      }
+                    })).catch(e => console.error("Email notification batch failed:", e))
                 }
             } catch (e) { console.error("Fan-out failed:", e); }
         })()
