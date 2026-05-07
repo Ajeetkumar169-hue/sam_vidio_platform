@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
                 category: metadata.categoryId || null,
                 tags: metadata.tags || [],
                 visibility: metadata.visibility || "public",
-                status: "pending", // Initial status is pending, but visible to public
+                status: "ready", // Mark as ready so it can play immediately
                 processingProgress: 100,
                 filePublicId: key,
                 storageSize: metadata.fileSize || 0,

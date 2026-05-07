@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { ThumbsUp, MessageSquare, Share2, Loader2, Zap, Tag, Trash2, DownloadCloud } from "lucide-react"
+import Hls from "hls.js"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { ShareDialog } from "@/components/share-dialog"
@@ -182,14 +183,7 @@ export function ShortsFeed() {
           {/* Vertical Video Container */}
           <div className="h-full aspect-[9/16] relative bg-background shadow-2xl">
             {index === currentIndex && (
-                <video 
-                    src={short.videoUrl} 
-                    className="h-full w-full object-cover"
-                    autoPlay
-                    loop
-                    muted={false}
-                    playsInline
-                />
+                <ShortPlayer src={short.videoUrl} />
             )}
 
             {/* UI Overlay */}
@@ -316,6 +310,40 @@ export function ShortsFeed() {
         </DrawerContent>
       </Drawer>
     </div>
+  )
+}
+
+function ShortPlayer({ src }: { src: string }) {
+  const videoRef = useRef<HTMLVideoElement>(null)
+
+  useEffect(() => {
+    if (!src || !videoRef.current) return
+    const video = videoRef.current
+    const isHLS = src.includes(".m3u8")
+
+    if (isHLS) {
+      if (Hls.isSupported()) {
+        const hls = new Hls()
+        hls.loadSource(src)
+        hls.attachMedia(video)
+        return () => hls.destroy()
+      } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = src
+      }
+    } else {
+      video.src = src
+    }
+  }, [src])
+
+  return (
+    <video
+      ref={videoRef}
+      className="h-full w-full object-cover"
+      autoPlay
+      loop
+      muted={false}
+      playsInline
+    />
   )
 }
 
