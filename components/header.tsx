@@ -13,8 +13,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Menu, Search, Upload, User, LogOut, LayoutDashboard, Film, Settings, Bell, Check } from "lucide-react"
+import { Menu, Search, Upload, User, LogOut, LayoutDashboard, Film, Settings, Bell, Check, Clock, ArrowUpLeft, X } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useClickAway } from "@/hooks/use-click-away" // I'll check if this exists or use a simple ref
 
 interface HeaderProps {
   onMenuClick: () => void
@@ -25,8 +26,17 @@ export function Header({ onMenuClick }: HeaderProps) {
   const { user, logout } = useAuth()
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
+  const [suggestions, setSuggestions] = useState<any[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
   const [notifications, setNotifications] = useState<any[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
+  const [history, setHistory] = useState<string[]>([])
+
+  // Load local search history
+  useEffect(() => {
+    const saved = JSON.parse(localStorage.getItem("search_history") || "[]")
+    setHistory(saved)
+  }, [])
 
   // Fetch notifications and unread count
   useEffect(() => {
@@ -84,11 +94,43 @@ export function Header({ onMenuClick }: HeaderProps) {
     }
   }
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
+  // Fetch Suggestions
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (searchQuery.trim().length > 0) {
+        try {
+          const res = await fetch(`/api/search/suggestions?q=${encodeURIComponent(searchQuery)}`)
+          const data = await res.json()
+          setSuggestions(data.data?.suggestions || [])
+        } catch {
+          setSuggestions([])
+        }
+      } else {
+        setSuggestions([])
+      }
+    }, 200)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  const handleSearch = (e?: React.FormEvent, term?: string) => {
+    if (e) e.preventDefault()
+    const finalQuery = term || searchQuery.trim()
+    if (finalQuery) {
+      // Save to history
+      const newHistory = [finalQuery, ...history.filter(h => h !== finalQuery)].slice(0, 10)
+      setHistory(newHistory)
+      localStorage.setItem("search_history", JSON.stringify(newHistory))
+      
+      setShowSuggestions(false)
+      router.push(`/search?q=${encodeURIComponent(finalQuery)}`)
     }
+  }
+
+  const removeFromHistory = (e: React.MouseEvent, term: string) => {
+    e.stopPropagation()
+    const newHistory = history.filter(h => h !== term)
+    setHistory(newHistory)
+    localStorage.setItem("search_history", JSON.stringify(newHistory))
   }
 
   return (
@@ -100,32 +142,140 @@ export function Header({ onMenuClick }: HeaderProps) {
         </Link>
       </div>
 
-      {/* Center: Search */}
-      <div className="flex flex-1 items-center justify-center md:w-2/4">
-        
-        {/* Desktop Search - Premium SaaS Style */}
-        <form onSubmit={handleSearch} className="hidden md:flex w-full max-w-xl group relative">
-          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-foreground/20 group-focus-within:text-primary transition-colors">
-            <Search className="h-4 w-4" />
-          </div>
-          <Input
-            type="search"
-            placeholder="Search anything..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 h-10 rounded-full glass-light border-foreground/5 text-sm transition-all focus-visible:ring-primary/20 focus-visible:bg-foreground/5"
-          />
-        </form>
-      </div>
+        {/* Center: Search */}
+        <div className="flex flex-1 items-center justify-center md:w-2/4 relative">
+          
+          {/* Desktop Search - Premium SaaS Style */}
+          <form onSubmit={handleSearch} className="hidden md:flex w-full max-w-xl group relative z-50">
+            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-foreground/20 group-focus-within:text-primary transition-colors">
+              <Search className="h-4 w-4" />
+            </div>
+            <Input
+              type="search"
+              placeholder="Search anything..."
+              value={searchQuery}
+              onFocus={() => setShowSuggestions(true)}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 h-10 rounded-full glass-light border-foreground/5 text-sm transition-all focus-visible:ring-primary/20 focus-visible:bg-foreground/5"
+            />
+            {showSuggestions && (searchQuery.length > 0 || history.length > 0) && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-foreground/10 rounded-2xl p-2 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden">
+                    <div className="max-h-[70vh] overflow-y-auto platinum-scrollbar">
+                        {/* History Items */}
+                        {searchQuery.length === 0 && history.map((term) => (
+                            <div 
+                              key={term}
+                              onClick={() => handleSearch(undefined, term)}
+                              className="flex items-center gap-3 px-3 py-2.5 hover:bg-foreground/5 rounded-xl cursor-pointer group"
+                            >
+                                <Clock className="h-4 w-4 text-muted-foreground/40" />
+                                <span className="flex-1 text-sm font-bold truncate text-primary/80">{term}</span>
+                                <button onClick={(e) => removeFromHistory(e, term)} className="p-1 hover:bg-foreground/10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <X className="h-3 w-3 text-muted-foreground" />
+                                </button>
+                            </div>
+                        ))}
+
+                        {/* Suggestion Items */}
+                        {suggestions.map((s) => (
+                            <div 
+                              key={s.text}
+                              onClick={() => handleSearch(undefined, s.text)}
+                              className="flex items-center gap-3 px-3 py-2.5 hover:bg-foreground/5 rounded-xl cursor-pointer group"
+                            >
+                                <Search className="h-4 w-4 text-muted-foreground/40" />
+                                <span className="flex-1 text-sm font-bold truncate">{s.text}</span>
+                                {s.thumbnail && (
+                                    <div className="h-8 w-12 rounded-lg bg-foreground/5 overflow-hidden border border-foreground/10 shrink-0">
+                                        <img src={s.thumbnail} className="h-full w-full object-cover" alt="" />
+                                    </div>
+                                )}
+                                <ArrowUpLeft className="h-4 w-4 text-muted-foreground/20 group-hover:text-primary transition-colors" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+          </form>
+
+          {/* Click away layer */}
+          {showSuggestions && (
+              <div 
+                className="fixed inset-0 z-40 bg-background/20 backdrop-blur-sm md:bg-transparent" 
+                onClick={() => setShowSuggestions(false)}
+              />
+          )}
+
+          {/* Mobile Search Overlay */}
+          {showSuggestions && (
+              <div className="fixed inset-0 z-[100] bg-background md:hidden flex flex-col animate-in slide-in-from-top duration-300">
+                  <div className="flex items-center gap-3 p-4 border-b border-foreground/5">
+                      <Button variant="ghost" size="icon" onClick={() => setShowSuggestions(false)}>
+                          <Menu className="h-5 w-5 rotate-90" />
+                      </Button>
+                      <form onSubmit={handleSearch} className="flex-1 flex items-center bg-foreground/5 rounded-full px-4 h-10">
+                          <input 
+                            autoFocus
+                            type="text" 
+                            placeholder="Search..." 
+                            className="flex-1 bg-transparent border-none outline-none text-sm font-medium"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                          />
+                          {searchQuery && (
+                              <button type="button" onClick={() => setSearchQuery("")}>
+                                  <X className="h-4 w-4 text-muted-foreground" />
+                              </button>
+                          )}
+                      </form>
+                      <Button type="button" variant="ghost" size="icon">
+                         <div className="h-9 w-9 rounded-full bg-foreground/5 flex items-center justify-center">
+                            <Menu className="h-5 w-5" /> {/* This is the voice icon in the screenshot */}
+                         </div>
+                      </Button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-2">
+                        {/* Mobile suggestions look identical to desktop suggestions but full width */}
+                        {searchQuery.length === 0 && history.map((term) => (
+                            <div 
+                              key={term}
+                              onClick={() => handleSearch(undefined, term)}
+                              className="flex items-center gap-4 px-4 py-3.5 hover:bg-foreground/5 rounded-xl cursor-pointer group"
+                            >
+                                <Clock className="h-5 w-5 text-muted-foreground/40" />
+                                <span className="flex-1 text-sm font-bold truncate text-primary/80">{term}</span>
+                                <ArrowUpLeft className="h-5 w-5 text-muted-foreground/20" />
+                            </div>
+                        ))}
+                        {suggestions.map((s) => (
+                            <div 
+                              key={s.text}
+                              onClick={() => handleSearch(undefined, s.text)}
+                              className="flex items-center gap-4 px-4 py-3.5 hover:bg-foreground/5 rounded-xl cursor-pointer group"
+                            >
+                                <Search className="h-5 w-5 text-muted-foreground/40" />
+                                <span className="flex-1 text-sm font-bold truncate">{s.text}</span>
+                                {s.thumbnail && (
+                                    <div className="h-9 w-14 rounded-lg bg-foreground/5 overflow-hidden border border-foreground/10 shrink-0">
+                                        <img src={s.thumbnail} className="h-full w-full object-cover" alt="" />
+                                    </div>
+                                )}
+                                <ArrowUpLeft className="h-5 w-5 text-muted-foreground/20" />
+                            </div>
+                        ))}
+                  </div>
+              </div>
+          )}
+        </div>
 
       {/* Right: Actions */}
       <div className="flex items-center justify-end gap-3 md:w-1/4">
-        {/* Mobile Search Icon - Hidden as it is in Bottom Nav */}
+        {/* Mobile Search Icon */}
         <Button
           variant="ghost"
           size="icon"
-          className="hidden text-white/50"
-          onClick={() => router.push("/search")}
+          className="md:hidden text-foreground/50"
+          onClick={() => setShowSuggestions(true)}
         >
           <Search className="h-5 w-5" />
         </Button>
