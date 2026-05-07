@@ -110,14 +110,7 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
                     <Users className="h-5 w-5 text-primary" />
                     <span className="text-[10px] font-bold uppercase tracking-wider text-foreground">Subscriptions</span>
                  </Link>
-                 <Link href="/latest" className="flex flex-col items-center gap-2 p-4 rounded-2xl glass-light hover:bg-foreground/5 transition-all text-center">
-                    <Clock className="h-5 w-5 text-primary" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-foreground">Latest</span>
-                 </Link>
-                 <Link href="/top-rated" className="flex flex-col items-center gap-2 p-4 rounded-2xl glass-light hover:bg-foreground/5 transition-all text-center">
-                    <Star className="h-5 w-5 text-primary" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-foreground">Top Rated</span>
-                 </Link>
+
                  <Link href="/categories" className="flex flex-col items-center gap-2 p-4 rounded-2xl glass-light hover:bg-foreground/5 transition-all text-center">
                     <Grid3X3 className="h-5 w-5 text-primary" />
                     <span className="text-[10px] font-bold uppercase tracking-wider text-foreground">Categories</span>

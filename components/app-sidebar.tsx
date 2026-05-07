@@ -60,8 +60,6 @@ export function AppSidebar({ open, pinned, onTogglePin, onClose, onMouseEnter, o
   const mainLinks = [
     { href: "/", label: "Home", icon: Home },
     { href: "/softporn", label: "SoftPorn", icon: Zap },
-    { href: "/latest", label: "Latest", icon: Clock },
-    { href: "/top-rated", label: "Top Rated", icon: ThumbsUp },
     { href: "/categories", label: "All Categories", icon: Grid3X3 },
     { href: "/chat", label: "Global Chat", icon: MessageCircle },
     { href: "/explore/channels", label: "Explore Channels", icon: Users },
