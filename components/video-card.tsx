@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Eye, ThumbsUp, Clock } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface VideoCardProps {
   video: {
@@ -32,6 +33,7 @@ interface VideoCardProps {
   }
   compact?: boolean
   index?: number
+  className?: string
 }
 
 const getCloudinaryUrl = (url: string, width = 480, height = 270) => {
@@ -67,7 +69,7 @@ function timeAgo(date: string): string {
   return `${months}mo ago`
 }
 
-export function VideoCard({ video, compact, index = 10 }: VideoCardProps) {
+export function VideoCard({ video, compact, index = 10, className }: VideoCardProps) {
   const [mounted, setMounted] = useState(false)
   
   useEffect(() => {
@@ -90,7 +92,7 @@ export function VideoCard({ video, compact, index = 10 }: VideoCardProps) {
   )
 
   return (
-    <Link href={`/watch/${videoId}`} className="group block">
+    <Link href={`/watch/${videoId}`} className={cn("group block", className)}>
       <div className={cn("overflow-hidden rounded-lg", compact ? "flex gap-3" : "flex flex-col")}>
         {/* Thumbnail & Preview */}
         <div
@@ -196,6 +198,4 @@ export function VideoCard({ video, compact, index = 10 }: VideoCardProps) {
   )
 }
 
-function cn(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(" ")
-}
+
