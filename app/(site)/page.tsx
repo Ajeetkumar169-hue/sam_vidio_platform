@@ -1,18 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import Link from "next/link"
-import { VideoGrid } from "@/components/video-grid"
-import { VideoCarousel } from "@/components/video-carousel"
 import { VideoCard } from "@/components/video-card"
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { TrendingUp, Clock, Star, ChevronRight, Users, MessageCircle } from "lucide-react"
+import { Loader2 } from "lucide-react"
 
 interface Video {
-  _id?: string
-  id?: string
+  _id: string
   title: string
   thumbnailUrl: string
   views: number
@@ -21,212 +16,116 @@ interface Video {
   createdAt: string
   channel?: { name: string; slug: string; logo?: string }
   uploader?: { username: string; avatar?: string }
-  category?: { name: string; slug: string }
   videoUrl: string
 }
 
-interface ChannelData {
-  _id?: string
-  id?: string
-  name: string
-  slug: string
-  logo: string
-  subscriberCount: number
-  videoCount: number
-  owner?: { username: string; avatar: string }
-}
-
-interface Category {
-  _id?: string
-  id?: string
-  name: string
-  slug: string
-}
-
 export default function HomePage() {
-  const [trending, setTrending] = useState<Video[]>([])
-  const [latest, setLatest] = useState<Video[]>([])
-  const [topRated, setTopRated] = useState<Video[]>([])
-  const [channels, setChannels] = useState<ChannelData[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
+  const [videos, setVideos] = useState<Video[]>([])
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+
+  const fetchVideos = async (pageNum: number, append = false) => {
+    try {
+      if (append) setLoadingMore(true)
+      else setLoading(true)
+
+      const res = await fetch(`/api/videos?page=${pageNum}&limit=12`)
+      const data = await res.json()
+      const newVideos = data.data?.videos || data.videos || []
+
+      if (newVideos.length < 12) setHasMore(false)
+      
+      if (append) {
+        setVideos(prev => [...prev, ...newVideos])
+      } else {
+        setVideos(newVideos)
+      }
+    } catch (err) {
+      console.error("Failed to load videos:", err)
+    } finally {
+      setLoading(false)
+      setLoadingMore(false)
+    }
+  }
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        const [trendingRes, latestRes, topRes, channelRes, catRes] = await Promise.all([
-          fetch("/api/videos?sort=trending&limit=8").then((r) => r.ok ? r.json() : { videos: [] }).catch(() => ({ videos: [] })),
-          fetch("/api/videos?sort=latest&limit=8").then((r) => r.ok ? r.json() : { videos: [] }).catch(() => ({ videos: [] })),
-          fetch("/api/videos?sort=top-rated&limit=8").then((r) => r.ok ? r.json() : { videos: [] }).catch(() => ({ videos: [] })),
-          fetch("/api/channels?limit=6").then((r) => r.ok ? r.json() : { channels: [] }).catch(() => ({ channels: [] })),
-          fetch("/api/categories").then((r) => r.ok ? r.json() : { categories: [] }).catch(() => ({ categories: [] })),
-        ])
-        setTrending(trendingRes.data?.videos || trendingRes.videos || [])
-        setLatest(latestRes.data?.videos || latestRes.videos || [])
-        setTopRated(topRes.data?.videos || topRes.videos || [])
-        setChannels(channelRes.data?.channels || channelRes.channels || [])
-        setCategories(catRes.data?.categories || catRes.categories || [])
-      } catch (err) {
-        console.error("Failed to load homepage:", err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchData()
+    fetchVideos(1)
   }, [])
 
+  const loadMore = () => {
+    const nextPage = page + 1
+    setPage(nextPage)
+    fetchVideos(nextPage, true)
+  }
+
   return (
-    <div className="max-w-screen-xl mx-auto px-2 sm:px-4 md:px-6 py-6">
-      {/* Hero Section */}
-      <section className="mb-8 rounded-xl bg-gradient-to-r from-primary/20 via-primary/10 to-transparent p-6 lg:p-8">
-        <h1 className="text-balance text-2xl font-bold text-foreground lg:text-3xl">
-          Welcome to SAM
-        </h1>
-        <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground lg:text-base">
-          Discover trending videos, subscribe to your favorite channels, and share your own content with the world.
-        </p>
-        <div className="mt-4 flex flex-col md:flex-row gap-3">
-          <Link href="/chat" className="w-full md:w-auto">
-            <Button size="sm" className="gap-2 w-full md:w-auto bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20">
-              <MessageCircle className="h-4 w-4" />
-              Let&apos;s talk
-            </Button>
-          </Link>
-          <Link href="/softporn" className="w-full md:w-auto">
-            <Button size="sm" variant="secondary" className="gap-2 w-full md:md:w-auto bg-white/5 hover:bg-white/10 text-white font-bold border-white/5 rounded-full px-6">
-              <TrendingUp className="h-4 w-4 text-primary" />
-              SoftPorn
-            </Button>
-          </Link>
+    <div className="max-w-screen-2xl mx-auto px-4 py-6">
+      
+      {/* YouTube Style Categories Bar (Optional but nice) */}
+      <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-6 sticky top-16 bg-background z-10">
+        {["All", "New to you", "Recently uploaded", "Trending", "Popular"].map((cat) => (
+            <button 
+                key={cat} 
+                className="px-4 py-1.5 rounded-full bg-foreground/5 hover:bg-foreground/10 text-sm font-black whitespace-nowrap transition-colors"
+            >
+                {cat}
+            </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8">
+           {Array.from({ length: 12 }).map((_, i) => (
+             <div key={i} className="space-y-3">
+               <Skeleton className="aspect-video w-full rounded-2xl" />
+               <div className="flex gap-3">
+                 <Skeleton className="h-10 w-10 rounded-full" />
+                 <div className="flex-1 space-y-2">
+                   <Skeleton className="h-4 w-full" />
+                   <Skeleton className="h-3 w-2/3" />
+                 </div>
+               </div>
+             </div>
+           ))}
         </div>
-      </section>
-
-      {/* Trending Videos */}
-      <Section title="Trending Now" icon={<TrendingUp className="h-5 w-5 text-primary" />} href="/trending">
-        <VideoCarousel videos={trending} loading={loading} emptyMessage="No trending videos yet" />
-      </Section>
-
-      {/* Categories Row */}
-      {categories.length > 0 && (
-        <section className="mb-8">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-foreground">Categories</h2>
-            <Link href="/categories" className="text-sm text-primary hover:underline">
-              View All
-            </Link>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-10">
+            {videos.map((video) => (
+              <VideoCard key={video._id} video={video} />
+            ))}
           </div>
-          <ScrollArea className="w-full whitespace-nowrap">
-            <div className="flex gap-3 pb-3">
-              {categories.map((cat) => (
-                <Link
-                  key={cat._id || cat.id}
-                  href={`/category/${cat.slug}`}
-                  className="inline-flex flex-shrink-0 items-center rounded-full border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
-                >
-                  {cat.name}
-                </Link>
-              ))}
-            </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
-        </section>
-      )}
 
-      {/* Latest Videos */}
-      <Section title="Latest Uploads" icon={<Clock className="h-5 w-5 text-primary" />} href="/latest">
-        <VideoCarousel videos={latest} loading={loading} emptyMessage="No videos uploaded yet" />
-      </Section>
-
-      {/* Popular Channels */}
-      {(loading || channels.length > 0) && (
-        <section className="mb-8">
-          <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
-              <h2 className="text-lg font-semibold text-foreground">Popular Channels</h2>
-            </div>
-          </div>
-          {loading ? (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-6">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="flex flex-col items-center gap-2">
-                  <Skeleton className="h-16 w-16 rounded-full" />
-                  <Skeleton className="h-3 w-20" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-6">
-              {channels.map((ch) => (
-                <Link
-                  key={ch._id || ch.id}
-                  href={`/channel/${ch.slug}`}
-                  className="group flex flex-col items-center gap-2 rounded-lg p-3 transition-colors hover:bg-secondary"
-                >
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-xl font-bold text-primary transition-transform group-hover:scale-110">
-                    {ch.name.charAt(0).toUpperCase()}
-                  </div>
-                  <p className="text-center text-sm font-medium text-foreground">{ch.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {ch.subscriberCount} subscribers
-                  </p>
-                </Link>
-              ))}
+          {videos.length === 0 && (
+            <div className="py-20 text-center">
+              <h2 className="text-xl font-bold">No videos found</h2>
+              <p className="text-muted-foreground mt-2">Try checking back later or explore channels.</p>
             </div>
           )}
-        </section>
-      )}
 
-      {/* Top Rated */}
-      <Section title="Top Rated" icon={<Star className="h-5 w-5 text-primary" />} href="/top-rated">
-        <VideoCarousel videos={topRated} loading={loading} emptyMessage="No top rated videos yet" />
-      </Section>
-
-      {/* Empty state */}
-      {!loading && trending.length === 0 && latest.length === 0 && (
-        <div className="mt-8 rounded-xl border border-border bg-card p-8 text-center">
-          <h3 className="mb-2 text-lg font-semibold text-foreground">Getting Started</h3>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Sign up, create a channel, and start uploading videos to share with the world.
-          </p>
-          <div className="flex flex-col md:flex-row justify-center gap-3">
-            <Link href="/register" className="w-full md:w-auto">
-              <Button size="sm" className="w-full md:w-auto">Create Account</Button>
-            </Link>
-            <Link href="/categories" className="w-full md:w-auto">
-              <Button size="sm" variant="secondary" className="w-full md:w-auto">Browse Categories</Button>
-            </Link>
-          </div>
-        </div>
+          {hasMore && (
+            <div className="mt-12 flex justify-center pb-10">
+              <Button 
+                variant="outline" 
+                onClick={loadMore} 
+                disabled={loadingMore}
+                className="rounded-full px-8 font-black uppercase tracking-widest text-xs"
+              >
+                {loadingMore ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  "Load More"
+                )}
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
-  )
-}
-
-function Section({
-  title,
-  icon,
-  href,
-  children,
-}: {
-  title: string
-  icon: React.ReactNode
-  href: string
-  children: React.ReactNode
-}) {
-  return (
-    <section className="mb-8">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {icon}
-          <h2 className="text-lg font-semibold text-foreground">{title}</h2>
-        </div>
-        <Link href={href} className="flex items-center gap-1 text-sm text-primary hover:underline">
-          View All
-          <ChevronRight className="h-4 w-4" />
-        </Link>
-      </div>
-      {children}
-    </section>
   )
 }
