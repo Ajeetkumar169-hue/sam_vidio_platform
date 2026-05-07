@@ -210,35 +210,7 @@ export function ShortsFeed() {
                       <h3 className="font-medium text-white text-base leading-snug line-clamp-2 max-w-[80%] mb-2">{short.title}</h3>
                    </div>
 
-                   {/* Right Side Action Icons (Share & Download) */}
-                   <div className="flex flex-col gap-3 items-center">
-                        {/* Share */}
-                        <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-white/70 uppercase tracking-tighter">Share</span>
-                            <ShareDialog 
-                              videoId={short._id} 
-                              title={short.title} 
-                              trigger={
-                                <button className="h-9 w-9 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-all active:scale-90">
-                                    <Share2 className="h-4.5 w-4.5 text-white" />
-                                </button>
-                              }
-                            />
-                        </div>
 
-                        {/* Download */}
-                        <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-white/70 uppercase tracking-tighter">Save</span>
-                            <DownloadButton 
-                              video={short} 
-                              trigger={
-                                <button className="h-9 w-9 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-all active:scale-90">
-                                    <DownloadCloud className="h-4.5 w-4.5 text-white" />
-                                </button>
-                              }
-                            />
-                        </div>
-                   </div>
                 </div>
 
                 {/* Left Actions Sidebar */}
