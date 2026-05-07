@@ -42,7 +42,7 @@ export function ShortsFeed() {
   const [likedStatus, setLikedStatus] = useState<Record<string, { liked: boolean, disliked: boolean, likes: number }>>({})
   const [commentOpen, setCommentOpen] = useState(false)
   const [commentShortId, setCommentShortId] = useState<string | null>(null)
-  const [lastScrollTop, setLastScrollTop] = useState(0)
+  const lastScrollTop = useRef(0)
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -68,14 +68,15 @@ export function ShortsFeed() {
     const { scrollTop, clientHeight } = containerRef.current
     
     // Toggle Navbars based on scroll direction (Mobile Only)
+    // We use a 10px threshold to avoid jitter
     if (window.innerWidth < 1024) {
-      if (scrollTop > lastScrollTop && scrollTop > 50) {
+      if (scrollTop > lastScrollTop.current + 10) {
         window.dispatchEvent(new CustomEvent("toggle-navs", { detail: true }))
-      } else if (scrollTop < lastScrollTop) {
+      } else if (scrollTop < lastScrollTop.current - 10) {
         window.dispatchEvent(new CustomEvent("toggle-navs", { detail: false }))
       }
     }
-    setLastScrollTop(scrollTop)
+    lastScrollTop.current = scrollTop
 
     const index = Math.round(scrollTop / clientHeight)
     if (index !== currentIndex) {

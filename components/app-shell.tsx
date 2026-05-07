@@ -84,8 +84,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         />
 
         <div className={cn(
-          "transition-transform duration-300 fixed top-0 left-0 right-0 z-[50]",
-          hideNavs ? "-translate-y-full" : "translate-y-0"
+          "transition-all duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] fixed top-0 left-0 right-0 z-[50]",
+          hideNavs ? "-translate-y-full opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
         )}>
           <Header onMenuClick={() => setSidebarOpen(true)} />
         </div>
@@ -116,8 +116,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {/* --- MOBILE NAVIGATION --- */}
         <div className={cn(
-          "transition-transform duration-300 fixed bottom-0 left-0 right-0 z-[50] lg:hidden",
-          hideNavs ? "translate-y-full" : "translate-y-0"
+          "transition-all duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] fixed bottom-0 left-0 right-0 z-[50] lg:hidden",
+          hideNavs ? "translate-y-full opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
         )}>
           <MobileNav onMoreClick={() => setIsDrawerOpen(true)} />
         </div>
