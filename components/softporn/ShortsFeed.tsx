@@ -1,14 +1,24 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Loader2, ThumbsUp, MessageSquare, Share2, Music2, UserPlus, Zap, RotateCcw } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { VideoPlayer } from "@/components/video-player"
+import { ThumbsUp, MessageSquare, Share2, Loader2, Zap, Tag } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 import { ShareDialog } from "@/components/share-dialog"
+import {
+  Drawer,
+  DrawerContent,
+  DrawerTrigger,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerClose,
+} from "@/components/ui/drawer"
+import { CommentsSection } from "@/components/comments-section"
+import { Button } from "@/components/ui/button"
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
-import { toast } from "sonner"
-import { cn } from "@/lib/utils"
 
 interface Short {
   _id: string
@@ -30,6 +40,8 @@ export function ShortsFeed() {
   const [loading, setLoading] = useState(true)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [likedStatus, setLikedStatus] = useState<Record<string, { liked: boolean, disliked: boolean, likes: number }>>({})
+  const [commentOpen, setCommentOpen] = useState(false)
+  const [commentShortId, setCommentShortId] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -176,13 +188,13 @@ export function ShortsFeed() {
                         <button 
                           onClick={() => handleLike(short._id)}
                           className={cn(
-                            "h-12 w-12 rounded-full backdrop-blur-md flex items-center justify-center transition-colors",
+                            "h-10 w-10 rounded-full backdrop-blur-md flex items-center justify-center transition-colors",
                             likedStatus[short._id]?.liked ? "bg-primary text-white" : "bg-white/10 text-white hover:bg-white/20"
                           )}
                         >
-                            <ThumbsUp className={cn("h-6 w-6", likedStatus[short._id]?.liked && "fill-current")} />
+                            <ThumbsUp className={cn("h-5 w-5", likedStatus[short._id]?.liked && "fill-current")} />
                         </button>
-                        <span className="text-xs font-bold text-white">{formatNumber(likedStatus[short._id]?.likes || short.likes)}</span>
+                        <span className="text-[10px] font-bold text-white">{formatNumber(likedStatus[short._id]?.likes || short.likes)}</span>
                     </div>
 
                     {/* Dislike */}
@@ -190,21 +202,27 @@ export function ShortsFeed() {
                         <button 
                           onClick={() => handleDislike(short._id)}
                           className={cn(
-                            "h-12 w-12 rounded-full backdrop-blur-md flex items-center justify-center transition-colors",
+                            "h-10 w-10 rounded-full backdrop-blur-md flex items-center justify-center transition-colors",
                             likedStatus[short._id]?.disliked ? "bg-destructive text-white" : "bg-white/10 text-white hover:bg-white/20"
                           )}
                         >
-                            <ThumbsUp className={cn("h-6 w-6 rotate-180", likedStatus[short._id]?.disliked && "fill-current")} />
+                            <ThumbsUp className={cn("h-5 w-5 rotate-180", likedStatus[short._id]?.disliked && "fill-current")} />
                         </button>
-                        <span className="text-xs font-bold text-white">Dislike</span>
+                        <span className="text-[10px] font-bold text-white uppercase tracking-tighter">Dislike</span>
                     </div>
 
                     {/* Comments */}
                     <div className="flex flex-col items-center gap-1">
-                        <button className="h-12 w-12 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors">
-                            <MessageSquare className="h-6 w-6 text-white" />
+                        <button 
+                          onClick={() => {
+                            setCommentShortId(short._id)
+                            setCommentOpen(true)
+                          }}
+                          className="h-10 w-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors"
+                        >
+                            <MessageSquare className="h-5 w-5 text-white" />
                         </button>
-                        <span className="text-xs font-bold text-white">195</span>
+                        <span className="text-[10px] font-bold text-white">Comments</span>
                     </div>
 
                     {/* Share */}
@@ -213,12 +231,12 @@ export function ShortsFeed() {
                           videoId={short._id} 
                           title={short.title} 
                           trigger={
-                            <button className="h-12 w-12 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors">
-                                <Share2 className="h-6 w-6 text-white" />
+                            <button className="h-10 w-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors">
+                                <Share2 className="h-5 w-5 text-white" />
                             </button>
                           }
                         />
-                        <span className="text-xs font-bold text-white">Share</span>
+                        <span className="text-[10px] font-bold text-white uppercase tracking-tighter">Share</span>
                     </div>
 
                     {/* Channel Profile Icon */}
@@ -232,6 +250,26 @@ export function ShortsFeed() {
           </div>
         </div>
       ))}
+
+      {/* Real-time Comments Drawer */}
+      <Drawer open={commentOpen} onOpenChange={setCommentOpen}>
+        <DrawerContent className="max-h-[80vh] bg-background border-t border-white/10">
+          <DrawerHeader className="border-b border-white/5 pb-2">
+            <DrawerTitle>Comments</DrawerTitle>
+            <DrawerDescription>View and post comments on this short</DrawerDescription>
+          </DrawerHeader>
+          <div className="p-4 overflow-y-auto">
+            {commentShortId && (
+              <CommentsSection videoId={commentShortId} />
+            )}
+          </div>
+          <DrawerFooter className="pt-0">
+            <DrawerClose asChild>
+              <Button variant="outline">Close</Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </div>
   )
 }
