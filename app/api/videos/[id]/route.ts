@@ -23,22 +23,22 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "Video not found" }, { status: 404 })
     }
 
-    // Prepare response with stringified IDs
+    // Prepare response with safe serialization
     return NextResponse.json({
       video: {
         ...video,
-        _id: video._id.toString(),
+        _id: video._id?.toString() || id,
         channel: video.channel ? {
           ...video.channel,
-          _id: video.channel._id?.toString()
+          _id: video.channel._id?.toString() || ""
         } : null,
         category: video.category ? {
           ...video.category,
-          _id: video.category._id?.toString()
+          _id: video.category._id?.toString() || ""
         } : null,
         uploader: video.uploader ? {
           ...video.uploader,
-          _id: video.uploader._id?.toString()
+          _id: video.uploader._id?.toString() || ""
         } : null,
       },
     }, {

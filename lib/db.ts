@@ -9,11 +9,11 @@ declare global {
   var mongoose: { conn: any; promise: Promise<any> | null; } | undefined;
 }
 
-const MONGO_URI = process.env.MONGO_URI;
+const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
 
 // 1. Strict Validation BEFORE connection attempt
 if (!MONGO_URI || (!MONGO_URI.startsWith("mongodb://") && !MONGO_URI.startsWith("mongodb+srv://"))) {
-  throw new Error("❌ Error: Invalid or missing MONGO_URI. Please update your .env.local file with a valid MongoDB connection string.");
+  throw new Error("❌ Error: Invalid or missing MONGO_URI/MONGODB_URI. Please update your .env.local file with a valid MongoDB connection string.");
 }
 
 // 2. Global cache management
