@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { Header } from "@/components/header"
 import { AppSidebar } from "@/components/app-sidebar"
 import { MobileNav } from "@/components/mobile-nav"
@@ -15,6 +15,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   
   // Mobile Drawer State
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [hideNavs, setHideNavs] = useState(false)
+  
+  useEffect(() => {
+    const handleHide = (e: any) => setHideNavs(e.detail)
+    window.addEventListener("toggle-navs", handleHide as any)
+    return () => window.removeEventListener("toggle-navs", handleHide as any)
+  }, [])
   
   const openTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -76,7 +83,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           onMouseLeave={cancelOpenRequest}
         />
 
-        <Header onMenuClick={() => setSidebarOpen(true)} />
+        <div className={cn(
+          "transition-transform duration-300 fixed top-0 left-0 right-0 z-[50]",
+          hideNavs ? "-translate-y-full" : "translate-y-0"
+        )}>
+          <Header onMenuClick={() => setSidebarOpen(true)} />
+        </div>
         
         <div className="flex flex-1 overflow-hidden relative">
           <AppSidebar 
@@ -103,7 +115,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* --- MOBILE NAVIGATION --- */}
-        <MobileNav onMoreClick={() => setIsDrawerOpen(true)} />
+        <div className={cn(
+          "transition-transform duration-300 fixed bottom-0 left-0 right-0 z-[50] lg:hidden",
+          hideNavs ? "translate-y-full" : "translate-y-0"
+        )}>
+          <MobileNav onMoreClick={() => setIsDrawerOpen(true)} />
+        </div>
         <MobileDrawer open={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
 
       </div>

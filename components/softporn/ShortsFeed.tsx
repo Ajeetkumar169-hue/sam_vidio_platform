@@ -42,6 +42,7 @@ export function ShortsFeed() {
   const [likedStatus, setLikedStatus] = useState<Record<string, { liked: boolean, disliked: boolean, likes: number }>>({})
   const [commentOpen, setCommentOpen] = useState(false)
   const [commentShortId, setCommentShortId] = useState<string | null>(null)
+  const [lastScrollTop, setLastScrollTop] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -63,8 +64,21 @@ export function ShortsFeed() {
   }, [])
 
   const handleScroll = () => {
-    if (containerRef.current) {
-      const index = Math.round(containerRef.current.scrollTop / containerRef.current.clientHeight)
+    if (!containerRef.current) return
+    const { scrollTop, clientHeight } = containerRef.current
+    
+    // Toggle Navbars based on scroll direction (Mobile Only)
+    if (window.innerWidth < 1024) {
+      if (scrollTop > lastScrollTop && scrollTop > 50) {
+        window.dispatchEvent(new CustomEvent("toggle-navs", { detail: true }))
+      } else if (scrollTop < lastScrollTop) {
+        window.dispatchEvent(new CustomEvent("toggle-navs", { detail: false }))
+      }
+    }
+    setLastScrollTop(scrollTop)
+
+    const index = Math.round(scrollTop / clientHeight)
+    if (index !== currentIndex) {
       setCurrentIndex(index)
     }
   }
@@ -182,7 +196,7 @@ export function ShortsFeed() {
                 </div>
 
                 {/* Actions Sidebar (Now Left) */}
-                <div className="flex flex-col gap-5 items-center mb-4">
+                <div className="flex flex-col gap-5 items-center mb-4 pl-3">
                     {/* Like */}
                     <div className="flex flex-col items-center gap-1">
                         <button 
