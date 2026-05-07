@@ -230,8 +230,7 @@ export function ShortsFeed() {
                         <div className="flex items-center gap-2">
                             <span className="text-[10px] font-bold text-white/70 uppercase tracking-tighter">Save</span>
                             <DownloadButton 
-                              videoUrl={short.videoUrl} 
-                              title={short.title} 
+                              video={short} 
                               trigger={
                                 <button className="h-9 w-9 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-all active:scale-90">
                                     <DownloadCloud className="h-4.5 w-4.5 text-white" />

@@ -21,11 +21,12 @@ interface VideoData {
 }
 
 interface DownloadButtonProps {
-  video: VideoData
+  video: any // Use any for flexibility or specific VideoData
   className?: string
+  trigger?: React.ReactNode
 }
 
-export function DownloadButton({ video, className }: DownloadButtonProps) {
+export function DownloadButton({ video, className, trigger }: DownloadButtonProps) {
   const [status, setStatus] = useState<"idle" | "preparing" | "completed" | "restricted">("idle")
   
   // 1. Domain & Extension Validation (Security Hardening)
@@ -100,6 +101,10 @@ export function DownloadButton({ video, className }: DownloadButtonProps) {
   const handleOpenNewTab = () => {
     window.open(video.videoUrl, "_blank", "noopener,noreferrer")
     toast.info("Opening in new tab for manual save")
+  }
+
+  if (trigger) {
+    return <div onClick={handleDownload} className="cursor-pointer">{trigger}</div>
   }
 
   if (status === "restricted") {
