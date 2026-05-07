@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Menu, Search, Upload, User, LogOut, LayoutDashboard, Film, Settings, Bell, Check, Clock, ArrowUpLeft, X } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useClickAway } from "@/hooks/use-click-away" // I'll check if this exists or use a simple ref
+import { useClickAway } from "../hooks/use-click-away"
 
 interface HeaderProps {
   onMenuClick: () => void
@@ -31,6 +31,10 @@ export function Header({ onMenuClick }: HeaderProps) {
   const [notifications, setNotifications] = useState<any[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [history, setHistory] = useState<string[]>([])
+
+  const suggestionsRef = useClickAway(() => {
+    setShowSuggestions(false)
+  })
 
   // Load local search history
   useEffect(() => {
@@ -146,7 +150,7 @@ export function Header({ onMenuClick }: HeaderProps) {
         <div className="flex flex-1 items-center justify-center md:w-2/4 relative">
           
           {/* Desktop Search - Premium SaaS Style */}
-          <form onSubmit={handleSearch} className="hidden md:flex w-full max-w-xl group relative z-50">
+          <form onSubmit={handleSearch} className="hidden md:flex w-full max-w-xl group relative z-50" ref={suggestionsRef}>
             <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-foreground/20 group-focus-within:text-primary transition-colors">
               <Search className="h-4 w-4" />
             </div>
