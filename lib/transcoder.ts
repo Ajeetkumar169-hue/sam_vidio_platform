@@ -16,6 +16,19 @@ export async function processVideo(videoId: string, inputPath: string) {
     }
 
     try {
+        // Check if FFmpeg is available
+        const hasFFmpeg = await new Promise((resolve) => {
+            const process = spawn("ffmpeg", ["-version"]);
+            process.on("error", () => resolve(false));
+            process.on("close", (code) => resolve(code === 0));
+        });
+
+        if (!hasFFmpeg) {
+            console.warn("⚠️ [ENGINE] FFmpeg not found. Skipping transcoding and keeping raw video.");
+            await updateStatus(videoId, "ready", 100);
+            return;
+        }
+
         await updateStatus(videoId, "processing", 10);
 
         // 1. Generate Thumbnail
