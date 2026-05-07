@@ -249,12 +249,12 @@ export function WatchView({ initialVideo }: WatchViewProps) {
                   channelSlug={video.channel?.slug || ""} 
                   initialSubscriberCount={video.channel?.subscriberCount}
                   showCount={false}
-                  className="rounded-full bg-foreground text-background hover:bg-foreground/90 font-black px-6 text-xs lg:text-sm h-10 border-none shadow-none"
+                  className="rounded-full font-black px-6 text-xs lg:text-sm h-10 border-none shadow-none"
                 />
               </div>
 
               {/* Action Buttons (Pill Group) */}
-              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 lg:pb-0">
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 lg:pb-0 scroll-smooth">
                 {/* Like/Dislike Pill */}
                 <div className="flex items-center h-10 rounded-full bg-foreground/5 hover:bg-foreground/10 transition-colors">
                   <button 
