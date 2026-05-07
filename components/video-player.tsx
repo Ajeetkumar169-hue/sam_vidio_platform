@@ -170,6 +170,7 @@ export function VideoPlayer({ url, poster, className = "", qualities = [] }: Vid
     >
         <video
           ref={videoRef}
+          src={currentUrl}
           className="h-full w-full object-contain cursor-pointer"
           poster={poster}
           playsInline
@@ -182,13 +183,13 @@ export function VideoPlayer({ url, poster, className = "", qualities = [] }: Vid
             if (video.error) {
               switch (video.error.code) {
                 case 1: msg = "Playback aborted by user"; break;
-                case 2: msg = "Network error while loading video"; break;
-                case 3: msg = "Video decoding failed (corrupted file?)"; break;
-                case 4: msg = "Video format not supported or source not found"; break;
+                case 2: msg = "Network error while loading video. Check your connection or S3 permissions."; break;
+                case 3: msg = "Video decoding failed (corrupted file or unsupported codec?)"; break;
+                case 4: msg = "Video format not supported or source file not found (404)"; break;
               }
             }
-            console.error("❌ [Video Player Error]:", msg, video.error);
-            setError(msg);
+            console.error(`❌ [Video Player Error] URL: ${currentUrl}`, msg, video.error);
+            setError(`${msg} (URL: ${currentUrl})`);
           }}
         />
 
