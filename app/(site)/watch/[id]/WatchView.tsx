@@ -12,7 +12,7 @@ import { toast } from "sonner"
 import { VideoPlayer } from "@/components/video-player"
 import { DownloadButton } from "@/components/download-button"
 import { ShareDialog } from "@/components/share-dialog"
-import { ThumbsUp, Eye, Users, Clock, Tag, Trash2 } from "lucide-react"
+import { ThumbsUp, Eye, Users, Clock, Tag, Trash2, Share2, DownloadCloud, Bookmark, MoreVertical, MessageSquare } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SubscribeButton } from "@/components/subscribe-button"
 
@@ -187,164 +187,220 @@ export function WatchView({ initialVideo }: WatchViewProps) {
   }
 
   return (
-    <div className="pb-4 lg:p-6">
-      <div className="mx-auto flex max-w-7xl flex-col gap-6 lg:flex-row">
-        {/* Main Content */}
-        <div className="flex-1">
-          {/* Video Player */}
-          <div className="aspect-video w-full overflow-hidden bg-black sm:rounded-lg">
-            <VideoPlayer 
-              url={video.videoUrl} 
-              poster={video.thumbnailUrl} 
-              qualities={video.qualities}
-            />
-          </div>
+    <div className="bg-background min-h-screen">
+      <div className="mx-auto max-w-[1700px] lg:px-6 lg:py-6">
+        <div className="flex flex-col gap-6 lg:flex-row">
+          
+          {/* LEFT COLUMN: Player & Info */}
+          <div className="flex-1 lg:max-w-[calc(100%-400px)] xl:max-w-[calc(100%-450px)]">
+            
+            {/* 1. Video Player */}
+            <div className="aspect-video w-full overflow-hidden bg-black lg:rounded-2xl shadow-2xl">
+              <VideoPlayer 
+                url={video.videoUrl} 
+                poster={video.thumbnailUrl} 
+                qualities={video.qualities}
+              />
+            </div>
 
-          {/* Video Info Container */}
-          <div className="mt-4 px-4 sm:px-0">
-            <h1 className="text-xl font-bold leading-snug text-foreground md:text-2xl">
-              {video.title}
-            </h1>
-
-            <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              {/* Stats */}
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Eye className="h-4 w-4" />
-                  {formatNumber(video.views)} views
-                </span>
-                <span className="flex items-center gap-1">
-                  <Clock className="h-4 w-4" />
-                  {formatDate(video.createdAt)}
-                </span>
-              </div>
-
-              {/* Actions System */}
-              <div className="mt-4 flex flex-col items-start sm:items-end gap-3 px-4 sm:px-0">
-                {/* Row 1: Like, Dislike, Delete, Download */}
-                <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2 w-full">
-                  {/* Like/Dislike Group */}
-                  <div className="flex items-center rounded-full bg-secondary p-1 flex-shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={cn(
-                        "gap-2 rounded-l-full pr-4 border-r border-white/10 hover:bg-white/5",
-                        liked && "text-primary"
-                      )}
-                      onClick={handleLike}
-                    >
-                      <ThumbsUp className={cn("h-4 w-4", liked && "fill-current")} />
-                      <span className="text-xs font-bold">{formatNumber(likeCount)}</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={cn(
-                        "gap-2 rounded-r-full pl-4 hover:bg-white/5",
-                        disliked && "text-destructive"
-                      )}
-                      onClick={handleDislike}
-                    >
-                      <ThumbsUp className={cn("h-4 w-4 rotate-180", disliked && "fill-current")} />
-                      <span className="text-xs font-bold">-{formatNumber(dislikeCount)}</span>
-                    </Button>
-                  </div>
-
-                  {/* Admin Delete */}
-                  {user?.role === "admin" && (
-                    <Button 
-                      variant="destructive" 
-                      size="sm" 
-                      className="gap-2 h-9 rounded-full px-4" 
-                      onClick={handleDelete}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span className="hidden sm:inline">Delete</span>
-                    </Button>
-                  )}
-
-                  {/* Download */}
-                  <DownloadButton video={video} />
-                </div>
-
-                {/* Row 2: Share Button (Aligned Right) */}
-                <div className="flex justify-start sm:justify-end w-full">
-                  <ShareDialog videoId={videoId} title={video.title} description={video.description} />
-                </div>
+            {/* 2. Video Title & Metadata */}
+            <div className="mt-4 px-4 lg:px-0">
+              <h1 className="text-xl font-black leading-tight text-foreground md:text-2xl lg:text-3xl tracking-tight">
+                {video.title}
+              </h1>
+              
+              {/* Mobile Meta (One line) */}
+              <div className="flex flex-wrap items-center gap-1.5 text-[12px] text-muted-foreground/60 mt-2 lg:hidden font-medium">
+                {video.channel && <span>@{video.channel.slug}</span>}
+                <span className="h-1 w-1 rounded-full bg-muted-foreground/30" />
+                <span>{formatNumber(video.views)} views</span>
+                <span className="h-1 w-1 rounded-full bg-muted-foreground/30" />
+                <span>{formatDate(video.createdAt)}</span>
+                <span className="text-primary font-bold ml-1">#Trending</span>
+                <span className="ml-1 text-foreground/40">...more</span>
               </div>
             </div>
 
-            {/* Channel Info */}
-            {video.channel && !isSubscribed && (
-              <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between justify-center rounded-lg bg-secondary p-3">
-                <Link
-                  href={`/channel/${video.channel.slug}`}
-                  className="flex items-center gap-3 mb-3 sm:mb-0"
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
-                    {video.channel.name.charAt(0).toUpperCase()}
+            {/* 3. Actions Bar (PC vs Mobile handled via flex-col/row) */}
+            <div className="mt-4 px-4 lg:px-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              
+              {/* Channel Section */}
+              <div className="flex items-center justify-between lg:justify-start lg:gap-6">
+                {video.channel && (
+                  <div className="flex items-center gap-3">
+                    <Link href={`/channel/${video.channel.slug}`} className="relative h-10 w-10 lg:h-12 lg:w-12 shrink-0">
+                      {video.channel.logo ? (
+                        <img src={video.channel.logo} alt="" className="h-full w-full rounded-full object-cover border border-foreground/10" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center rounded-full bg-primary text-primary-foreground font-black uppercase lg:text-lg">
+                          {video.channel.name.charAt(0)}
+                        </div>
+                      )}
+                    </Link>
+                    <div className="min-w-0 pr-4">
+                      <Link href={`/channel/${video.channel.slug}`} className="block font-black text-sm lg:text-base truncate hover:text-primary transition-colors">
+                        {video.channel.name}
+                      </Link>
+                      <p className="text-[11px] lg:text-xs text-muted-foreground/60 font-bold uppercase tracking-tighter">
+                        {formatNumber(video.channel.subscriberCount || 0)} Subscribers
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-foreground">{video.channel.name}</p>
-                    <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Users className="h-3 w-3" />
-                      {formatNumber(video.channel.subscriberCount || 0)} subscribers
-                    </p>
-                  </div>
-                </Link>
+                )}
                 <SubscribeButton 
-                  channelSlug={video.channel.slug} 
-                  initialSubscriberCount={video.channel.subscriberCount}
-                  className="w-full sm:w-auto"
-                  onStatusChange={(status) => setIsSubscribed(status)}
+                  channelSlug={video.channel?.slug || ""} 
+                  initialSubscriberCount={video.channel?.subscriberCount}
+                  className="rounded-full bg-foreground text-background hover:bg-foreground/90 font-black px-6 text-xs lg:text-sm h-10"
                 />
               </div>
-            )}
 
-            {/* Description */}
-            {video.description && (
-              <div className="mt-4 rounded-lg bg-secondary p-4">
-                <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground md:text-base">
-                  {video.description}
-                </p>
-              </div>
-            )}
-
-            {/* Tags */}
-            {video.tags && video.tags.length > 0 && (
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <Tag className="h-4 w-4 text-muted-foreground" />
-                {video.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full bg-secondary px-3 py-1 text-xs text-muted-foreground"
+              {/* Action Buttons (Pill Group) */}
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 lg:pb-0">
+                {/* Like/Dislike Pill */}
+                <div className="flex items-center h-10 rounded-full bg-foreground/5 hover:bg-foreground/10 transition-colors">
+                  <button 
+                    onClick={handleLike}
+                    className={cn(
+                      "flex items-center gap-2 h-full px-4 rounded-l-full border-r border-foreground/5 hover:bg-foreground/5 transition-all",
+                      liked && "text-primary"
+                    )}
                   >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
+                    <ThumbsUp className={cn("h-5 w-5", liked && "fill-current")} />
+                    <span className="text-sm font-black tracking-tight">{formatNumber(likeCount)}</span>
+                  </button>
+                  <button 
+                    onClick={handleDislike}
+                    className={cn(
+                      "flex items-center h-full px-3 rounded-r-full hover:bg-foreground/5 transition-all",
+                      disliked && "text-destructive"
+                    )}
+                  >
+                    <ThumbsUp className={cn("h-5 w-5 rotate-180", disliked && "fill-current")} />
+                  </button>
+                </div>
 
-            {/* Comments */}
-            <div className="mt-6">
+                {/* Share Pill */}
+                <ShareDialog 
+                  videoId={videoId} 
+                  title={video.title} 
+                  trigger={
+                    <button className="flex items-center gap-2 h-10 px-4 rounded-full bg-foreground/5 hover:bg-foreground/10 transition-colors whitespace-nowrap">
+                      <Share2 className="h-5 w-5" />
+                      <span className="text-sm font-black tracking-tight">Share</span>
+                    </button>
+                  }
+                />
+
+                {/* Download Pill */}
+                <DownloadButton 
+                  video={video} 
+                  trigger={
+                    <button className="flex items-center gap-2 h-10 px-4 rounded-full bg-foreground/5 hover:bg-foreground/10 transition-colors whitespace-nowrap">
+                      <DownloadCloud className="h-5 w-5" />
+                      <span className="text-sm font-black tracking-tight">Download</span>
+                    </button>
+                  }
+                />
+
+                {/* Save Pill (PC Only) */}
+                <button className="hidden lg:flex items-center gap-2 h-10 px-4 rounded-full bg-foreground/5 hover:bg-foreground/10 transition-colors whitespace-nowrap">
+                  <Bookmark className="h-5 w-5" />
+                  <span className="text-sm font-black tracking-tight">Save</span>
+                </button>
+
+                {/* More Menu */}
+                <button className="flex items-center justify-center h-10 w-10 rounded-full bg-foreground/5 hover:bg-foreground/10 transition-colors">
+                  <MoreVertical className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* 4. Description Box */}
+            <div className="mt-4 px-4 lg:px-0">
+              <div className="rounded-2xl bg-foreground/5 p-4 hover:bg-foreground/[0.07] transition-all cursor-pointer group">
+                <div className="flex items-center gap-2 text-sm font-black mb-1 hidden lg:flex">
+                  <span>{formatNumber(video.views)} views</span>
+                  <span>{formatDate(video.createdAt)}</span>
+                </div>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap line-clamp-3 group-hover:line-clamp-none transition-all duration-500">
+                  {video.description || "No description available."}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {video.tags?.map(tag => (
+                    <span key={tag} className="text-primary font-bold text-xs hover:underline">#{tag}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* 5. Mobile Comments Preview Area */}
+            <div className="mt-4 px-4 lg:hidden">
+               <div className="rounded-2xl bg-foreground/5 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-black text-sm">Comments <span className="text-muted-foreground ml-1">7.6K</span></h3>
+                    <div className="flex -space-x-1">
+                       <div className="h-2 w-2 rounded-full bg-foreground/20" />
+                       <div className="h-2 w-2 rounded-full bg-foreground/40" />
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="h-8 w-8 rounded-full bg-primary shrink-0 overflow-hidden">
+                       <img src={user?.avatar || "/default-avatar.png"} alt="" className="h-full w-full object-cover" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs line-clamp-2 font-medium leading-tight">Add a comment or read what others are saying...</p>
+                    </div>
+                  </div>
+               </div>
+            </div>
+
+            {/* 6. Comments Section (PC) */}
+            <div className="mt-8 hidden lg:block">
               <CommentsSection videoId={videoId} />
             </div>
-          </div>
-        </div>
 
-        {/* Related Videos Sidebar */}
-        <div className="px-4 sm:px-0 lg:px-0">
-          <aside className="w-full lg:w-80 xl:w-96">
-            <h3 className="mb-3 text-sm font-semibold text-foreground">Related Videos</h3>
-            <div className="flex flex-col gap-3">
-              {related.length > 0 ? (
-                related.map((v) => <VideoCard key={v._id} video={v} compact />)
-              ) : (
-                <p className="text-sm text-muted-foreground">No related videos found</p>
-              )}
-            </div>
-          </aside>
+          </div>
+
+          {/* RIGHT COLUMN: Sidebar (Related Videos) */}
+          <div className="lg:w-[400px] xl:w-[450px] shrink-0">
+            <aside className="px-4 lg:px-0 space-y-4">
+              
+              {/* Category Pills (YouTube Style) */}
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-2">
+                <button className="px-4 py-1.5 rounded-full bg-foreground text-background text-sm font-black shrink-0">All</button>
+                <button className="px-4 py-1.5 rounded-full bg-foreground/5 hover:bg-foreground/10 text-sm font-black shrink-0 transition-colors">From {video.channel?.name || "Channel"}</button>
+                <button className="px-4 py-1.5 rounded-full bg-foreground/5 hover:bg-foreground/10 text-sm font-black shrink-0 transition-colors">Related</button>
+                <button className="px-4 py-1.5 rounded-full bg-foreground/5 hover:bg-foreground/10 text-sm font-black shrink-0 transition-colors">Recently uploaded</button>
+              </div>
+
+              {/* Related Video List */}
+              <div className="flex flex-col gap-4">
+                {related.length > 0 ? (
+                  related.map((v) => (
+                    <VideoCard key={v._id} video={v} compact />
+                  ))
+                ) : (
+                  <div className="space-y-4">
+                     {Array.from({ length: 6 }).map((_, i) => (
+                       <div key={i} className="flex gap-3">
+                          <Skeleton className="h-24 w-40 rounded-xl shrink-0" />
+                          <div className="flex-1 space-y-2">
+                             <Skeleton className="h-4 w-full" />
+                             <Skeleton className="h-3 w-2/3" />
+                          </div>
+                       </div>
+                     ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Mobile Comments Full List (Always at bottom on mobile) */}
+              <div className="mt-10 lg:hidden border-t border-foreground/5 pt-6">
+                 <CommentsSection videoId={videoId} />
+              </div>
+            </aside>
+          </div>
+
         </div>
       </div>
     </div>
