@@ -22,6 +22,7 @@ import {
   Shield,
   MessageCircle,
   Users,
+  Zap,
 } from "lucide-react"
 
 interface Category {
