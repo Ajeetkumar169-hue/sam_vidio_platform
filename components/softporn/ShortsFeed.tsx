@@ -1,19 +1,20 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { ThumbsUp, MessageSquare, Share2, Loader2, Zap, Tag } from "lucide-react"
+import { ThumbsUp, MessageSquare, Share2, Loader2, Zap, Tag, Trash2, DownloadCloud } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { ShareDialog } from "@/components/share-dialog"
+import { DownloadButton } from "@/components/download-button"
 import {
   Drawer,
+  DrawerClose,
   DrawerContent,
-  DrawerTrigger,
-  DrawerHeader,
-  DrawerTitle,
   DrawerDescription,
   DrawerFooter,
-  DrawerClose,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
 } from "@/components/ui/drawer"
 import { CommentsSection } from "@/components/comments-section"
 import { Button } from "@/components/ui/button"
@@ -26,6 +27,7 @@ interface Short {
   description: string
   videoUrl: string
   likes: number
+  uploader: string
   channel: {
     name: string
     slug: string
@@ -134,6 +136,18 @@ export function ShortsFeed() {
     }
   }
 
+  const handleDelete = async (videoId: string) => {
+    if (!window.confirm("Are you sure you want to delete this short?")) return
+    try {
+      const res = await fetch(`/api/videos/${videoId}`, { method: "DELETE" })
+      if (!res.ok) throw new Error("Failed to delete")
+      toast.success("Short deleted")
+      setShorts(prev => prev.filter(s => s._id !== videoId))
+    } catch (err: any) {
+      toast.error(err.message)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
@@ -182,21 +196,53 @@ export function ShortsFeed() {
             <div className="absolute inset-0 flex flex-col justify-end p-4 bg-gradient-to-t from-black/60 via-transparent to-transparent">
               
               <div className="flex flex-row-reverse justify-between items-end gap-4">
-                {/* Info (Now Right) */}
-                <div className="flex-1 pb-4 text-right">
-                   <div className="flex items-center justify-end gap-2 mb-3">
+                {/* Info & Right Actions */}
+                <div className="flex-1 pb-4 text-right flex flex-col items-end gap-4">
+                   <div className="flex items-center justify-end gap-2 mb-1">
                       <Button size="sm" className="h-8 rounded-full bg-white text-black hover:bg-white/90 font-bold px-4 mr-2">Subscribe</Button>
                       <p className="font-bold text-white text-sm">@{short.channel.slug}</p>
                       <div className="h-9 w-9 rounded-full bg-primary overflow-hidden border border-white/20">
                         {short.channel.logo ? <img src={short.channel.logo} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full flex items-center justify-center font-bold text-sm bg-secondary">{short.channel.name[0]}</div>}
                       </div>
                    </div>
+                   
                    <div className="space-y-2 flex flex-col items-end">
-                      <h3 className="font-medium text-white text-base leading-snug line-clamp-2 max-w-[80%]">{short.title}</h3>
+                      <h3 className="font-medium text-white text-base leading-snug line-clamp-2 max-w-[80%] mb-2">{short.title}</h3>
+                   </div>
+
+                   {/* Right Side Action Icons (Share & Download) */}
+                   <div className="flex flex-col gap-3 items-center">
+                        {/* Share */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-white/70 uppercase tracking-tighter">Share</span>
+                            <ShareDialog 
+                              videoId={short._id} 
+                              title={short.title} 
+                              trigger={
+                                <button className="h-9 w-9 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-all active:scale-90">
+                                    <Share2 className="h-4.5 w-4.5 text-white" />
+                                </button>
+                              }
+                            />
+                        </div>
+
+                        {/* Download */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-white/70 uppercase tracking-tighter">Save</span>
+                            <DownloadButton 
+                              videoUrl={short.videoUrl} 
+                              title={short.title} 
+                              trigger={
+                                <button className="h-9 w-9 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-all active:scale-90">
+                                    <DownloadCloud className="h-4.5 w-4.5 text-white" />
+                                </button>
+                              }
+                            />
+                        </div>
                    </div>
                 </div>
 
-                {/* Actions Sidebar (Now Left) */}
+                {/* Left Actions Sidebar */}
                 <div className="flex flex-col gap-5 items-center mb-4 pl-3">
                     {/* Like */}
                     <div className="flex flex-col items-center gap-1">
@@ -225,6 +271,19 @@ export function ShortsFeed() {
                         </button>
                         <span className="text-[10px] font-bold text-white uppercase tracking-tighter">Dislike</span>
                     </div>
+
+                    {/* Delete (Only for Owner/Admin) */}
+                    {(user?.id === short.uploader || user?.role === "admin") && (
+                      <div className="flex flex-col items-center gap-1">
+                          <button 
+                            onClick={() => handleDelete(short._id)}
+                            className="h-10 w-10 rounded-full bg-destructive/10 backdrop-blur-md flex items-center justify-center text-destructive hover:bg-destructive/20 transition-colors"
+                          >
+                              <Trash2 className="h-5 w-5" />
+                          </button>
+                          <span className="text-[10px] font-bold text-destructive uppercase tracking-tighter">Delete</span>
+                      </div>
+                    )}
 
                     {/* Comments */}
                     <div className="flex flex-col items-center gap-1">
