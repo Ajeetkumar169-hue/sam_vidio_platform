@@ -105,7 +105,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <main className={cn(
             "flex-1 overflow-y-auto platinum-scrollbar transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
-            sidebarPinned ? "lg:pl-64" : ""
+            sidebarPinned ? "lg:pl-64" : "",
+            hideNavs ? "pt-0" : "pt-16"
           )}>
             {children}
             
