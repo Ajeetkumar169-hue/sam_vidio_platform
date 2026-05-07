@@ -21,6 +21,7 @@ import {
   Download,
   Shield,
   MessageCircle,
+  Users,
 } from "lucide-react"
 
 interface Category {
