@@ -76,6 +76,7 @@ export function WatchView({ initialVideo }: WatchViewProps) {
   const [likeCount, setLikeCount] = useState(initialVideo.likes || 0)
   const [dislikeCount, setDislikeCount] = useState(initialVideo.dislikes || 0)
   const [isSubscribed, setIsSubscribed] = useState(false)
+  const [showComments, setShowComments] = useState(false)
 
   useEffect(() => {
     async function loadRelated() {
@@ -307,59 +308,38 @@ export function WatchView({ initialVideo }: WatchViewProps) {
             </div>
 
             {/* 4. Description Box */}
-            <div className="mt-4 px-4 lg:px-0">
-              <div 
-                className="rounded-2xl bg-foreground/5 p-4 hover:bg-foreground/[0.07] transition-all cursor-pointer group relative overflow-hidden"
-                onClick={() => {
-                   const p = document.getElementById("video-description")
-                   if (p) p.classList.toggle("line-clamp-none")
-                }}
-              >
-                <div className="flex items-center gap-2 text-sm font-black mb-1">
-                  <span>{formatNumber(video.views)} views</span>
-                  <span>{formatDate(video.createdAt)}</span>
-                </div>
-                <p 
-                    id="video-description" 
-                    className="text-sm leading-relaxed whitespace-pre-wrap line-clamp-2 transition-all duration-500"
+            {video.description && (
+              <div className="mt-4 px-4 lg:px-0">
+                <div 
+                  className="rounded-2xl bg-foreground/5 p-4 hover:bg-foreground/[0.07] transition-all cursor-pointer group relative overflow-hidden"
+                  onClick={() => {
+                     const p = document.getElementById("video-description")
+                     if (p) p.classList.toggle("line-clamp-none")
+                  }}
                 >
-                  {video.description || "Looking for more details? Click more..."}
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {video.tags?.map(tag => (
-                    <span key={tag} className="text-primary font-bold text-xs hover:underline">#{tag}</span>
-                  ))}
+                  <div className="flex items-center gap-2 text-sm font-black mb-1">
+                    <span>{formatNumber(video.views)} views</span>
+                    <span>{formatDate(video.createdAt)}</span>
+                  </div>
+                  <p 
+                      id="video-description" 
+                      className="text-sm leading-relaxed whitespace-pre-wrap line-clamp-2 transition-all duration-500"
+                  >
+                    {video.description}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {video.tags?.map(tag => (
+                      <span key={tag} className="text-primary font-bold text-xs hover:underline">#{tag}</span>
+                    ))}
+                  </div>
+                  <button className="mt-2 text-xs font-black uppercase tracking-widest text-primary hover:underline">
+                      ...more
+                  </button>
                 </div>
-                <button className="mt-2 text-xs font-black uppercase tracking-widest text-primary hover:underline">
-                    ...more
-                </button>
               </div>
-            </div>
+            )}
 
-            {/* 5. Mobile Comments Preview Area */}
-            <div className="mt-4 px-4 lg:hidden">
-               <div 
-                className="rounded-2xl bg-foreground/5 p-4 space-y-3 cursor-pointer hover:bg-foreground/[0.07] transition-all"
-                onClick={() => {
-                    document.getElementById("full-comments-section")?.scrollIntoView({ behavior: "smooth" })
-                }}
-               >
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-black text-sm uppercase tracking-widest">Comments</h3>
-                    <div className="flex -space-x-1">
-                       <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="h-8 w-8 rounded-full bg-foreground/10 shrink-0 overflow-hidden">
-                       <img src={user?.avatar || "/default-avatar.png"} alt="" className="h-full w-full object-cover" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-muted-foreground italic leading-tight">Tap to view comments or write your own...</p>
-                    </div>
-                  </div>
-               </div>
-            </div>
+
 
             {/* 6. Comments Section (PC) */}
             <div className="mt-8 hidden lg:block">
@@ -372,6 +352,23 @@ export function WatchView({ initialVideo }: WatchViewProps) {
           <div className="lg:w-[400px] xl:w-[450px] shrink-0">
             <aside className="px-4 lg:px-0 space-y-4">
               
+              {/* Mobile Comments Toggle (Above Related Videos) */}
+              <div className="lg:hidden">
+                 <button 
+                  onClick={() => setShowComments(!showComments)}
+                  className="w-full flex items-center justify-between p-4 rounded-2xl bg-foreground/5 hover:bg-foreground/10 transition-all mb-4"
+                 >
+                    <span className="font-black text-sm uppercase tracking-widest">Comments</span>
+                    <MessageSquare className={cn("h-5 w-5 transition-transform", showComments && "rotate-180 text-primary")} />
+                 </button>
+                 
+                 {showComments && (
+                    <div className="mb-8 animate-in fade-in slide-in-from-top-2 duration-300">
+                       <CommentsSection videoId={videoId} />
+                    </div>
+                 )}
+              </div>
+
               {/* Category Pills (YouTube Style) */}
               <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-2">
                 <button className="px-4 py-1.5 rounded-full bg-foreground text-background text-sm font-black shrink-0">All</button>
@@ -391,11 +388,6 @@ export function WatchView({ initialVideo }: WatchViewProps) {
                       <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">No Related Videos</p>
                    </div>
                 )}
-              </div>
-
-              {/* Mobile Comments Full List (Always at bottom on mobile) */}
-              <div id="full-comments-section" className="mt-10 lg:hidden border-t border-foreground/5 pt-6">
-                 <CommentsSection videoId={videoId} />
               </div>
             </aside>
           </div>
