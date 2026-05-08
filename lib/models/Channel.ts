@@ -29,7 +29,6 @@ const ChannelSchema = new Schema<IChannel>(
 )
 
 ChannelSchema.index({ subscriberCount: -1 })
-ChannelSchema.index({ slug: 1 })
 
 const Channel: Model<IChannel> = mongoose.models.Channel || mongoose.model<IChannel>("Channel", ChannelSchema)
 export default Channel

@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Smartphone, Link as LinkIcon, Loader2, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { S3TurboUploader } from "@/components/upload/s3-turbo-uploader"
+import { DirectUploader } from "@/components/upload/direct-uploader"
 import { VideoMetadataForm } from "@/components/upload/video-metadata-form"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -90,10 +90,10 @@ export default function UploadPage() {
             <div className="mx-auto max-w-4xl space-y-8">
                 <div className="text-center space-y-2">
                     <h1 className="text-3xl font-black tracking-tight md:text-5xl italic uppercase text-primary">
-                        {isComplete ? "UPLOAD SUCCESS!" : "TURBO UPLOAD"}
+                        {isComplete ? "UPLOAD SUCCESS!" : "UPLOAD VIDEO"}
                     </h1>
                     <p className="text-muted-foreground font-medium">
-                        {isComplete ? "Your content is being processed" : "YouTube-Scale Parallel Ingestion Engine V10"}
+                        {isComplete ? "Your video is ready to play!" : "Auto-thumbnail • Any video format • Instant playback"}
                     </p>
                 </div>
 
@@ -143,12 +143,16 @@ export default function UploadPage() {
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                                     <div className="space-y-6">
                                         <TabsContent value="device" className="mt-0">
-                                            <S3TurboUploader 
+                                            <DirectUploader 
                                                 metadata={{
                                                     ...formData,
                                                     isShort: uploadType === "short"
                                                 }}
-                                                onFileSelected={(file) => handleFormChange("title", file?.name.split(".")[0] || "")}
+                                                onFileSelected={(file) => {
+                                                    if (file && !formData.title) {
+                                                        handleFormChange("title", file.name.split(".").slice(0, -1).join("."))
+                                                    }
+                                                }}
                                                 onUploadComplete={(video) => {
                                                     setUploadedVideo(video)
                                                     setIsComplete(true)
@@ -233,7 +237,7 @@ export default function UploadPage() {
                                             {activeTab === "device" && (
                                                 <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 flex items-center gap-3">
                                                     <Upload className="h-5 w-5 text-primary" />
-                                                    <p className="text-xs font-medium text-primary">Turbo Mode: Using parallel S3 shards for 10x faster ingestion.</p>
+                                                    <p className="text-xs font-medium text-primary">Auto-thumbnail is generated from your video. Any format supported.</p>
                                                 </div>
                                             )}
                                         </div>
