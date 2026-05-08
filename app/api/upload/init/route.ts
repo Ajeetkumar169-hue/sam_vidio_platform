@@ -17,6 +17,12 @@ export async function POST(req: NextRequest) {
             return ApiResponse.badRequest("Missing filename or content type");
         }
 
+        const { slugify } = await import("@/lib/utils");
+        const extension = filename.split(".").pop();
+        const nameWithoutExtension = filename.split(".").slice(0, -1).join(".");
+        const sanitizedFilename = `${slugify(nameWithoutExtension)}.${extension}`;
+
+        const key = `videos/${randomUUID()}-${sanitizedFilename}`;
         // Server-side validation
         const MAX_SIZE = 1024 * 1024 * 1024 * 1024; // 1TB (From business requirement)
         if (fileSize > MAX_SIZE) {
@@ -27,8 +33,6 @@ export async function POST(req: NextRequest) {
         if (!allowedTypes.includes(contentType) && !contentType.startsWith("video/")) {
             return ApiResponse.badRequest("Unsupported video format");
         }
-
-        const key = `videos/${randomUUID()}-${filename}`;
 
         if (MOCK_MODE) {
             console.log("📁 [MOCK S3] Initializing mock upload for:", filename);
