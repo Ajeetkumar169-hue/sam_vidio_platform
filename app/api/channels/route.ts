@@ -10,18 +10,20 @@ export async function GET(req: NextRequest) {
     await connectDB()
     const { searchParams } = new URL(req.url)
     const limitInput = searchParams.get("limit")
-    const limit = limitInput ? parseInt(limitInput) : 10
+    const limit = Math.max(1, Math.min(limitInput ? parseInt(limitInput) : 10, 50))
 
     if (isNaN(limit)) {
       return NextResponse.json({ error: "Invalid limit parameter" }, { status: 400 })
     }
 
     // Fetch popular channels from MongoDB
-    // We explicitly import and reference User to ensure it's registered
+    // We explicitly reference models to ensure they are registered in Mongoose's cache
+    const modelReference = User.modelName && Channel.modelName; 
+    
     const channels = await Channel.find()
       .sort({ subscriberCount: -1 })
-      .limit(limit)
-      .populate("owner", "username avatar") // Populate owner from User model
+      .limit(limit) 
+      .populate("owner", "username avatar")
       .lean() as any[]
 
     if (!channels) {
@@ -56,7 +58,8 @@ export async function GET(req: NextRequest) {
     console.error("❌ Channels fetch error:", error)
     return NextResponse.json({ 
       error: error.message || "Internal server error",
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      details: error.name || "UnknownError",
+      message: "Please check your MongoDB connection and ensure models are registered."
     }, { status: 500 })
   }
 }

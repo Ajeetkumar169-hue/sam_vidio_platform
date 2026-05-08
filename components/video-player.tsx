@@ -127,10 +127,33 @@ export function VideoPlayer({ url, poster, className = "", qualities = [] }: Vid
 
   if (error) {
     return (
-      <div className={`flex items-center justify-center bg-secondary/50 rounded-lg border border-dashed border-border ${className}`}>
-        <div className="flex flex-col items-center gap-2 text-muted-foreground p-4 text-center">
-          <AlertCircle className="h-8 w-8 text-destructive/50" />
-          <p className="text-sm font-medium">{error}</p>
+      <div className={`flex items-center justify-center bg-secondary/20 rounded-lg border border-dashed border-border/50 ${className}`}>
+        <div className="flex flex-col items-center gap-4 text-muted-foreground p-8 text-center max-w-md">
+          <div className="p-4 rounded-full bg-destructive/10">
+            <AlertCircle className="h-10 w-10 text-destructive/70" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm font-bold text-foreground">Playback Error</p>
+            <p className="text-xs leading-relaxed opacity-70">{error}</p>
+          </div>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => { setError(null); setCurrentUrl(url + "?t=" + Date.now()); }}
+              className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold rounded-full transition-colors"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Retry Playback
+            </button>
+            <button 
+              onClick={() => window.location.reload()}
+              className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground text-xs font-bold rounded-full transition-colors"
+            >
+              Refresh Page
+            </button>
+          </div>
+          <p className="text-[10px] opacity-50 italic mt-2">
+            Tip: If this is a local upload, ensure the server is running and files exist in public/uploads.
+          </p>
         </div>
       </div>
     )
