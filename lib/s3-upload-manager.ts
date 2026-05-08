@@ -78,6 +78,7 @@ export class S3UploadManager {
         if (this.status === 'uploading') return;
 
         this.status = 'uploading';
+        this.lastProgressTime = Date.now(); // Reset timer
         this.emitProgress({ message: "Activating Global Distributed Ingestion..." });
 
         // 🧠 AI Load Balancer: Set initial state based on file complexity
@@ -170,11 +171,13 @@ export class S3UploadManager {
                     this.finalize(metadata).then(resolve).catch(reject);
                 }
 
-                if (Date.now() - this.lastProgressTime > 45000) {
+                // Increased stall timeout to 90s for slower connections
+                if (Date.now() - this.lastProgressTime > 90000) {
                     clearInterval(monitor);
                     this.killWorkers();
                     this.status = 'error';
-                    reject(new Error("GLOBAL_INGEST_STALL: Edge nodes timed out."));
+                    console.error("❌ GLOBAL_INGEST_STALL: No progress for 90s. Last updated:", new Date(this.lastProgressTime).toLocaleTimeString());
+                    reject(new Error("GLOBAL_INGEST_STALL: Edge nodes timed out. Please check your connection and try again."));
                 }
             }, 1000);
         });
@@ -197,22 +200,51 @@ export class S3UploadManager {
         if (queue.length === 0 || this.status !== 'uploading') return;
 
         const partNumber = queue.shift()!;
-        try {
-            const res = await fetch("/api/upload/url", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ key: this.key, uploadId: this.uploadId, partNumber })
-            });
-            const { data } = await res.json();
-            const url = data.url;
+        let attempts = 0;
+        const maxAttempts = 3;
 
+        const getUrl = async (): Promise<string | null> => {
+            try {
+                const res = await fetch("/api/upload/url", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ key: this.key, uploadId: this.uploadId, partNumber })
+                });
+
+                const json = await res.json();
+                if (!res.ok || !json.success) {
+                    throw new Error(json.error || `HTTP ${res.status}`);
+                }
+
+                return json.data.url;
+            } catch (err: any) {
+                console.error(`❌ [S3Manager] Failed to get signed URL for part ${partNumber}:`, err.message);
+                return null;
+            }
+        };
+
+        let url = await getUrl();
+        while (!url && attempts < maxAttempts && this.status === 'uploading') {
+            attempts++;
+            const delay = Math.pow(2, attempts) * 1000;
+            this.aiStatus = `Retrying part ${partNumber} in ${delay/1000}s...`;
+            this.emitProgress();
+            await new Promise(r => setTimeout(r, delay));
+            url = await getUrl();
+        }
+
+        if (url) {
             const start = (partNumber - 1) * this.chunkSize;
             const end = Math.min(start + this.chunkSize, this.file.size);
             const blob = this.file.slice(start, end);
-
             worker.postMessage({ type: 'UPLOAD_CHUNK', partNumber, url, blob });
-        } catch {
+        } else {
+            // Failed after retries, push back to queue and let another worker try or this one try later
             queue.push(partNumber);
+            this.aiStatus = "Network Congestion Detected. Cooling down...";
+            this.emitProgress();
+            // Wait before allowing this worker to try again to avoid spamming
+            setTimeout(() => this.dispatch(worker, queue), 5000);
         }
     }
 
