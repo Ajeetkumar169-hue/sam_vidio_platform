@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Smartphone, Link as LinkIcon, Loader2, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { DirectUploader } from "@/components/upload/direct-uploader"
+import { SmartUploader } from "@/components/upload/smart-uploader"
 import { VideoMetadataForm } from "@/components/upload/video-metadata-form"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -143,7 +143,7 @@ export default function UploadPage() {
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                                     <div className="space-y-6">
                                         <TabsContent value="device" className="mt-0">
-                                            <DirectUploader 
+                                            <SmartUploader 
                                                 metadata={{
                                                     ...formData,
                                                     isShort: uploadType === "short"
