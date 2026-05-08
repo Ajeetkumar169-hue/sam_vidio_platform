@@ -22,17 +22,20 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
     return NextResponse.json({
       channel: { 
         ...channel, 
-        _id: channel._id.toString(),
-        owner: channel.owner ? { 
-          _id: channel.owner._id.toString(), 
-          username: channel.owner.username, 
-          avatar: channel.owner.avatar 
+        _id: channel._id?.toString() || "",
+        owner: channel.owner && typeof channel.owner === 'object' ? { 
+          _id: channel.owner._id?.toString() || channel.owner.toString(), 
+          username: channel.owner.username || "Unknown", 
+          avatar: channel.owner.avatar || "" 
         } : null 
       },
-      videos: videos.map(v => ({
+      videos: (videos || []).map(v => ({
         ...v,
-        _id: v._id.toString(),
-        category: v.category ? { ...v.category, _id: v.category._id.toString() } : null
+        _id: v._id?.toString() || "",
+        category: v.category && typeof v.category === 'object' ? { 
+          ...v.category, 
+          _id: v.category._id?.toString() || v.category.toString() 
+        } : null
       })),
     })
   } catch (error: any) {
