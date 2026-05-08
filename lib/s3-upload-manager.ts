@@ -149,9 +149,11 @@ export class S3UploadManager {
                             }).catch(() => {});
                         }
                     } else if (type === 'CHUNK_FAIL') {
-                        this.aiStatus = "Path Failure: Auto-Rerouting Shard...";
+                        this.aiStatus = `Path Failure: ${error || "Unknown Error"}. Auto-Rerouting...`;
+                        console.warn(`⚠️ [S3Manager] Chunk ${partNumber} failed:`, error);
                         queue.push(partNumber);
-                        this.dispatch(worker, queue);
+                        this.emitProgress();
+                        setTimeout(() => this.dispatch(worker, queue), 2000);
                     }
                 };
                 this.workers.push(worker);

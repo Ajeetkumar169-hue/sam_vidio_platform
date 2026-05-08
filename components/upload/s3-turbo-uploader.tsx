@@ -124,6 +124,13 @@ export function S3TurboUploader({ onUploadComplete, onFileSelected, metadata }: 
                                     <span>{progress.percent}%</span>
                                 </div>
                                 <Progress value={progress.percent} className="h-1.5" />
+                                
+                                {progress.aiStatus && (
+                                    <p className="text-[10px] text-primary font-bold animate-pulse uppercase tracking-tight">
+                                        {progress.aiStatus}
+                                    </p>
+                                )}
+
                                 <div className="flex gap-2">
                                     {progress.status === "uploading" && <Button size="sm" variant="outline" className="h-7 text-[10px] flex-1" onClick={() => uploadManager?.pause()}><Pause className="h-3 w-3 mr-1" /> Pause</Button>}
                                     {progress.status === "paused" && <Button size="sm" variant="outline" className="h-7 text-[10px] flex-1" onClick={startUpload}><Play className="h-3 w-3 mr-1" /> Resume</Button>}
