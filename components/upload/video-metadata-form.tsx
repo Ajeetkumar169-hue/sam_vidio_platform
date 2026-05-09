@@ -7,7 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
-import { X } from "lucide-react"
+import { X, Check, ChevronsUpDown, Search } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Button } from "@/components/ui/button"
+import { useState } from "react"
+import { cn } from "@/lib/utils"
 
 interface Category {
     _id?: string;
@@ -35,6 +40,8 @@ interface VideoMetadataFormProps {
 }
 
 export function VideoMetadataForm({ data, onChange, categories, actors }: VideoMetadataFormProps) {
+    const [open, setOpen] = useState(false)
+
     const toggleActor = (actorId: string) => {
         const current = data.actors || []
         if (current.includes(actorId)) {
@@ -86,6 +93,72 @@ export function VideoMetadataForm({ data, onChange, categories, actors }: VideoM
                     </div>
 
                     <div className="flex flex-col gap-2">
+                        <Label className="text-base font-bold">Actors</Label>
+                        <Popover open={open} onOpenChange={setOpen}>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={open}
+                                    className="h-12 w-full justify-between bg-secondary/30 border-none rounded-xl hover:bg-secondary/40 text-left font-normal"
+                                >
+                                    <span className="truncate">
+                                        {data.actors?.length > 0 
+                                            ? `${data.actors.length} selected`
+                                            : "Select actors..."}
+                                    </span>
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0 border-none bg-card rounded-2xl shadow-2xl overflow-hidden" align="start">
+                                <Command className="bg-transparent">
+                                    <CommandInput placeholder="Search actor..." className="h-12 border-none focus:ring-0" />
+                                    <CommandList className="platinum-scrollbar">
+                                        <CommandEmpty>No actor found.</CommandEmpty>
+                                        <CommandGroup>
+                                            {actors.map((actor) => (
+                                                <CommandItem
+                                                    key={actor._id}
+                                                    value={actor.name}
+                                                    onSelect={() => toggleActor(actor._id)}
+                                                    className="flex items-center gap-2 p-2 rounded-xl cursor-pointer"
+                                                >
+                                                    <div className={cn(
+                                                        "flex h-4 w-4 items-center justify-center rounded border border-primary transition-colors",
+                                                        data.actors?.includes(actor._id) ? "bg-primary text-primary-foreground" : "opacity-50"
+                                                    )}>
+                                                        {data.actors?.includes(actor._id) && <Check className="h-3 w-3" />}
+                                                    </div>
+                                                    <span className="flex-1 text-sm font-medium">{actor.name}</span>
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                </div>
+
+                {/* Selected Actors Badges Below */}
+                {data.actors?.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                        {data.actors.map(id => {
+                            const actor = actors.find(a => a._id === id)
+                            return actor ? (
+                                <Badge key={id} variant="secondary" className="pl-3 pr-1 py-1 gap-1 rounded-full bg-primary/10 text-primary border-primary/20">
+                                    {actor.name}
+                                    <button onClick={() => toggleActor(id)} className="hover:bg-primary/20 rounded-full p-0.5">
+                                        <X className="h-3 w-3" />
+                                    </button>
+                                </Badge>
+                            ) : null
+                        })}
+                    </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-2">
                         <Label className="text-base font-bold">Visibility</Label>
                         <Select value={data.visibility} onValueChange={(v) => onChange("visibility", v)}>
                             <SelectTrigger className="h-12 bg-secondary/30 border-none rounded-xl">
@@ -98,63 +171,16 @@ export function VideoMetadataForm({ data, onChange, categories, actors }: VideoM
                             </SelectContent>
                         </Select>
                     </div>
-                </div>
 
-                <div className="flex flex-col gap-2">
-                    <Label htmlFor="tags" className="text-base font-bold">Tags</Label>
-                    <Input
-                        id="tags"
-                        placeholder="funny, viral, tutorial"
-                        value={data.tags}
-                        onChange={(e) => onChange("tags", e.target.value)}
-                        className="h-12 bg-secondary/30 border-none rounded-xl focus:ring-1 focus:ring-primary"
-                    />
-                </div>
-
-                <div className="flex flex-col gap-2">
-                    <Label className="text-base font-bold text-primary">Actors (Select one or more)</Label>
-                    <div className="border border-border/50 rounded-2xl bg-secondary/20 p-4 space-y-4">
-                        {/* Selected Actors Badges */}
-                        <div className="flex flex-wrap gap-2">
-                            {data.actors?.length > 0 ? (
-                                data.actors.map(id => {
-                                    const actor = actors.find(a => a._id === id)
-                                    return actor ? (
-                                        <Badge key={id} variant="secondary" className="pl-3 pr-1 py-1 gap-1 rounded-full bg-primary/10 text-primary border-primary/20">
-                                            {actor.name}
-                                            <button onClick={() => toggleActor(id)} className="hover:bg-primary/20 rounded-full p-0.5">
-                                                <X className="h-3 w-3" />
-                                            </button>
-                                        </Badge>
-                                    ) : null
-                                })
-                            ) : (
-                                <p className="text-xs text-muted-foreground italic">No actors selected</p>
-                            )}
-                        </div>
-
-                        {/* Actor Selection List */}
-                        <ScrollArea className="h-[150px] pr-4">
-                            <div className="grid grid-cols-2 gap-2">
-                                {actors.map(actor => (
-                                    <div 
-                                        key={actor._id} 
-                                        className={`flex items-center space-x-3 p-2 rounded-xl transition-colors cursor-pointer hover:bg-secondary/40 ${data.actors?.includes(actor._id) ? "bg-primary/5" : ""}`}
-                                        onClick={() => toggleActor(actor._id)}
-                                    >
-                                        <Checkbox 
-                                            id={`actor-${actor._id}`} 
-                                            checked={data.actors?.includes(actor._id)}
-                                            onCheckedChange={() => {}} // Handled by div onClick
-                                            className="rounded-md"
-                                        />
-                                        <label htmlFor={`actor-${actor._id}`} className="text-sm font-medium leading-none cursor-pointer">
-                                            {actor.name}
-                                        </label>
-                                    </div>
-                                ))}
-                            </div>
-                        </ScrollArea>
+                    <div className="flex flex-col gap-2">
+                        <Label htmlFor="tags" className="text-base font-bold">Tags</Label>
+                        <Input
+                            id="tags"
+                            placeholder="funny, viral, tutorial"
+                            value={data.tags}
+                            onChange={(e) => onChange("tags", e.target.value)}
+                            className="h-12 bg-secondary/30 border-none rounded-xl focus:ring-1 focus:ring-primary"
+                        />
                     </div>
                 </div>
             </div>
