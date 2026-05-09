@@ -50,3 +50,26 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, error: err.message }, { status: 500 })
     }
 }
+export async function DELETE(req: NextRequest) {
+    try {
+        const user = await getCurrentUser()
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+        await dbConnect()
+        const { messageId } = await req.json()
+
+        const message = await Message.findById(messageId)
+        if (!message) return NextResponse.json({ error: "Message not found" }, { status: 404 })
+
+        // Check if user is owner or admin
+        const isOwner = message.sender?.toString() === user.userId
+        if (!isOwner && user.role !== "admin") {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+        }
+
+        await Message.findByIdAndDelete(messageId)
+        return NextResponse.json({ success: true })
+    } catch (err: any) {
+        return NextResponse.json({ success: false, error: err.message }, { status: 500 })
+    }
+}

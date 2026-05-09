@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
     if (!user) return ApiResponse.unauthorized()
 
     const body = await req.json()
-    const { title, description, videoUrl, categoryId, thumbnailUrl, visibility, tags, isShort } = body
+    const { title, description, videoUrl, categoryId, thumbnailUrl, visibility, tags, actors, isShort } = body
 
     if (!title || !videoUrl) {
         return ApiResponse.badRequest("Title and Video URL are required");
@@ -106,6 +106,22 @@ export async function POST(req: NextRequest) {
       
       const idempotencyKey = videoUrl + user.userId;
 
+      // Process Actors
+      let actorIds: any[] = []
+      if (actors && typeof actors === "string") {
+          const Actor = (await import("@/lib/models/Actor")).default
+          const actorNames = actors.split(",").map(a => a.trim()).filter(Boolean)
+          
+          for (const name of actorNames) {
+              const slug = name.toLowerCase().replace(/[^a-z0-9]/g, "-")
+              let actor = await Actor.findOne({ $or: [{ name }, { slug }] }).session(session)
+              if (!actor) {
+                  actor = (await Actor.create([{ name, slug }], { session }))[0]
+              }
+              actorIds.push(actor._id)
+          }
+      }
+
       const videoData = {
         title,
         description: description || "",
@@ -115,6 +131,7 @@ export async function POST(req: NextRequest) {
         channel: channel._id,
         category: categoryId || null,
         tags: Array.isArray(tags) ? tags : [],
+        actors: actorIds,
         visibility: visibility || "public",
         status: "approved", // Link-based videos are auto-approved for simplicity
         uploadId: idempotencyKey,

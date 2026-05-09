@@ -62,6 +62,7 @@ export function AdminSidebar({ role, open, onClose }: AdminSidebarProps) {
         { href: "/admin/announcements", label: "Announcements", icon: Megaphone },
         { href: "/admin/videos", label: "Videos", icon: Film },
         { href: "/admin/categories", label: "Categories", icon: Grid3X3, disabled: role !== "admin" },
+        { href: "/admin/actors", label: "Actors", icon: Camera, disabled: role !== "admin" },
         { href: "/admin/channels", label: "Channels", icon: Tv, disabled: role !== "admin" },
         { href: "/admin/users", label: "Users", icon: Users, disabled: role !== "admin" },
         { href: "/admin/reports", label: "Reports", icon: AlertCircle },

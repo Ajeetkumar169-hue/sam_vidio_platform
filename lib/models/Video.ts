@@ -15,6 +15,7 @@ export interface IVideo {
   category?: mongoose.Types.ObjectId
   channel?: mongoose.Types.ObjectId
   tags?: string[]
+  actors?: mongoose.Types.ObjectId[]
   views: number
   likes: number
   dislikes: number
@@ -45,6 +46,7 @@ const VideoSchema = new Schema<IVideo>(
     category: { type: Schema.Types.ObjectId, ref: "Category" },
     channel: { type: Schema.Types.ObjectId, ref: "Channel" },
     tags: [{ type: String }],
+    actors: [{ type: Schema.Types.ObjectId, ref: "Actor" }],
     views: { type: Number, default: 0 },
     likes: { type: Number, default: 0 },
     dislikes: { type: Number, default: 0 },

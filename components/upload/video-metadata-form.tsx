@@ -17,6 +17,7 @@ interface VideoMetadataFormProps {
         description: string;
         categoryId: string;
         tags: string;
+        actors: string;
         visibility: string;
     };
     onChange: (field: string, value: string) => void;
@@ -89,6 +90,17 @@ export function VideoMetadataForm({ data, onChange, categories }: VideoMetadataF
                         value={data.tags}
                         onChange={(e) => onChange("tags", e.target.value)}
                         className="h-12 bg-secondary/30 border-none rounded-xl focus:ring-1 focus:ring-primary"
+                    />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                    <Label htmlFor="actors" className="text-base font-bold text-primary">Actors (Performers)</Label>
+                    <Input
+                        id="actors"
+                        placeholder="Actor 1, Actor 2, Actor 3"
+                        value={data.actors}
+                        onChange={(e) => onChange("actors", e.target.value)}
+                        className="h-12 bg-secondary/30 border-none rounded-xl focus:ring-1 focus:ring-primary font-bold"
                     />
                 </div>
             </div>

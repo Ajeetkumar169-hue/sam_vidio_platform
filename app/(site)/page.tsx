@@ -95,7 +95,7 @@ export default function HomePage() {
           <Link href="/softporn" className="w-full md:w-auto">
             <Button size="sm" variant="secondary" className="gap-2 w-full md:md:w-auto bg-white/5 hover:bg-white/10 text-white font-bold border-white/5 rounded-full px-6">
               <TrendingUp className="h-4 w-4 text-primary" />
-              SoftPorn
+              Shorts
             </Button>
           </Link>
         </div>

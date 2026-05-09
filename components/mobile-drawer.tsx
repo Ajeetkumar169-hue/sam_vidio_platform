@@ -113,7 +113,7 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
                  </Link>
                   <Link href="/softporn" className="flex flex-col items-center gap-2 p-4 rounded-2xl glass-light hover:bg-foreground/5 transition-all text-center">
                     <Zap className="h-5 w-5 text-primary" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-foreground">SoftPorn</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-foreground">Shorts</span>
                   </Link>
                  <Link href="/categories" className="flex flex-col items-center gap-2 p-4 rounded-2xl glass-light hover:bg-foreground/5 transition-all text-center">
                     <Grid3X3 className="h-5 w-5 text-primary" />

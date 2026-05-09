@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useAuth } from "@/lib/auth-context"
 import useSWR from "swr"
-import { Send, Image as ImageIcon, Mic, Smile, Paperclip, Loader2, Play, Square } from "lucide-react"
+import { Send, Image as ImageIcon, Mic, Smile, Paperclip, Loader2, Play, Square, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import Link from "next/link"
@@ -61,6 +61,22 @@ export default function ChatPage() {
             toast.error(err.message || "Failed to send message")
         } finally {
             setSending(false)
+        }
+    }
+
+    const handleDeleteMessage = async (messageId: string) => {
+        if (!confirm("Are you sure you want to delete this message?")) return
+        try {
+            const res = await fetch("/api/chat", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ messageId })
+            })
+            if (!res.ok) throw new Error("Failed to delete")
+            toast.success("Message deleted")
+            mutate()
+        } catch (err: any) {
+            toast.error(err.message || "Failed to delete message")
         }
     }
 
@@ -209,19 +225,34 @@ export default function ChatPage() {
                                 relative max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-2.5 shadow-sm 
                                 ${isMe ? "bg-primary text-primary-foreground rounded-tr-sm" : "bg-card border border-border/50 text-foreground rounded-tl-sm"}
                             `}>
-                                {/* Media Rendering */}
-                                {msg.messageType === "image" && msg.mediaUrl && (
-                                    <img src={msg.mediaUrl} alt="uploaded" className="max-w-full rounded-xl mb-2 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => window.open(msg.mediaUrl, "_blank")} />
-                                )}
-                                {msg.messageType === "video" && msg.mediaUrl && (
-                                    <video src={msg.mediaUrl} controls className="max-w-full rounded-xl mb-2" />
-                                )}
-                                {msg.messageType === "audio" && msg.mediaUrl && (
-                                    <audio src={msg.mediaUrl} controls className="max-w-full h-10 mb-2" />
-                                )}
+                                {/* Bubble Content Wrapper */}
+                                <div className="flex justify-between items-start gap-2 min-w-[80px]">
+                                    <div className="flex-1 min-w-0">
+                                        {/* Media Rendering */}
+                                        {msg.messageType === "image" && msg.mediaUrl && (
+                                            <img src={msg.mediaUrl} alt="uploaded" className="max-w-full rounded-xl mb-2 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => window.open(msg.mediaUrl, "_blank")} />
+                                        )}
+                                        {msg.messageType === "video" && msg.mediaUrl && (
+                                            <video src={msg.mediaUrl} controls className="max-w-full rounded-xl mb-2" />
+                                        )}
+                                        {msg.messageType === "audio" && msg.mediaUrl && (
+                                            <audio src={msg.mediaUrl} controls className="max-w-full h-10 mb-2" />
+                                        )}
 
-                                {/* Text Content */}
-                                {msg.content && <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>}
+                                        {/* Text Content */}
+                                        {msg.content && <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>}
+                                    </div>
+
+                                    {/* Delete Button */}
+                                    {(isMe || user.role === "admin") && (
+                                        <button 
+                                            onClick={() => handleDeleteMessage(msg._id)}
+                                            className={`p-1 rounded-full hover:bg-black/10 transition-colors shrink-0 -mr-1 ${isMe ? "text-primary-foreground/70 hover:text-primary-foreground" : "text-muted-foreground hover:text-destructive"}`}
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                        </button>
+                                    )}
+                                </div>
 
                                 {/* Time Stamp */}
                                 <span className={`text-[9px] mt-1 block text-right font-medium opacity-60`}>

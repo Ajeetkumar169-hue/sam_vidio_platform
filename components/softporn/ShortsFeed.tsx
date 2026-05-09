@@ -193,7 +193,7 @@ export function ShortsFeed() {
         <div className="h-20 w-20 bg-secondary rounded-full flex items-center justify-center">
             <Zap className="h-10 w-10 text-muted-foreground" />
         </div>
-        <p className="text-xl font-bold">No SoftPorn Shorts found</p>
+        <p className="text-xl font-bold">No Shorts found</p>
         <p className="text-muted-foreground">Be the first to upload one!</p>
       </div>
     )

@@ -28,6 +28,7 @@ export default function UploadPage() {
         description: "",
         categoryId: "",
         tags: "",
+        actors: "",
         visibility: "public",
         videoUrl: ""
     })
@@ -136,7 +137,7 @@ export default function UploadPage() {
                                         className={cn("rounded-2xl h-12 px-8 font-bold", uploadType === "short" ? "shadow-lg shadow-primary/20" : "opacity-60")}
                                         onClick={() => setUploadType("short")}
                                     >
-                                        SoftPorn (Shorts)
+                                        Shorts
                                     </Button>
                                 </div>
 

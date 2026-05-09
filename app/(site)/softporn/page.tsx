@@ -1,8 +1,8 @@
 import { ShortsFeed } from "@/components/softporn/ShortsFeed"
 
 export const metadata = {
-  title: "SoftPorn - Vertical Shorts Feed",
-  description: "Experience the fastest vertical video feed with SoftPorn Shorts."
+  title: "Shorts - Vertical Video Feed",
+  description: "Experience the fastest vertical video feed with Shorts."
 }
 
 export default function SoftPornPage() {

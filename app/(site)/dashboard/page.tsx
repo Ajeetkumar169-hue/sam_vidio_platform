@@ -191,7 +191,7 @@ export default function DashboardPage() {
         <TabsList className="mb-4 bg-secondary/50 rounded-xl p-1 h-12">
           <TabsTrigger value="videos" className="rounded-lg px-6 font-bold">My Videos</TabsTrigger>
           <TabsTrigger value="softporn" className="rounded-lg px-6 font-bold flex items-center gap-2">
-            <Zap className="h-4 w-4" /> SoftPorn
+            <Zap className="h-4 w-4" /> Shorts
           </TabsTrigger>
         </TabsList>
 
@@ -203,7 +203,7 @@ export default function DashboardPage() {
           />
         </TabsContent>
 
-        {/* SoftPorn Tab */}
+        {/* Shorts Tab */}
         <TabsContent value="softporn">
           <VideoList 
             videos={data.videos.filter(v => v.isShort)} 

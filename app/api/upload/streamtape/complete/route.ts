@@ -29,6 +29,21 @@ export async function POST(req: NextRequest) {
         )[0];
       }
 
+      // Process Actors
+      let actorIds: any[] = []
+      if (metadata.actors && typeof metadata.actors === "string") {
+          const Actor = (await import("@/lib/models/Actor")).default
+          const actorNames = metadata.actors.split(",").map(a => a.trim()).filter(Boolean)
+          
+          for (const name of actorNames) {
+              const slug = name.toLowerCase().replace(/[^a-z0-9]/g, "-")
+              let actor = await Actor.findOne({ $or: [{ name }, { slug }] }).session(session)
+              if (!actor) {
+                  actor = (await Actor.create([{ name, slug }], { session }))[0]
+              }
+              actorIds.push(actor._id)
+          }
+      }
       const videoData = {
         title: metadata.title || "Untitled Video",
         description: metadata.description || "",
@@ -38,6 +53,7 @@ export async function POST(req: NextRequest) {
         channel: channel._id,
         category: metadata.categoryId || null,
         tags: metadata.tags || [],
+        actors: actorIds,
         visibility: metadata.visibility || "public",
         status: "ready",
         processingProgress: 100,

@@ -246,7 +246,7 @@ export default function ChannelPage() {
                     activeTab === "softporn" ? "text-primary" : "text-muted-foreground hover:text-foreground"
                 )}
             >
-                SoftPorn
+                Shorts
                 {activeTab === "softporn" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]" />}
             </button>
         </div>
@@ -256,7 +256,7 @@ export default function ChannelPage() {
           {videos.filter(v => activeTab === "softporn" ? v.isShort : !v.isShort).length === 0 ? (
             <div className="flex flex-col items-center py-20 opacity-50">
                <Film className="h-12 w-12 mb-4" />
-               <p className="text-center text-muted-foreground font-bold uppercase tracking-widest text-xs">No {activeTab === "softporn" ? "SoftPorn shorts" : "videos"} uploaded yet</p>
+               <p className="text-center text-muted-foreground font-bold uppercase tracking-widest text-xs">No {activeTab === "softporn" ? "shorts" : "videos"} uploaded yet</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
