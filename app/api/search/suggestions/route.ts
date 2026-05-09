@@ -31,8 +31,15 @@ export async function GET(req: NextRequest) {
     .limit(10)
     .lean()
 
+    interface Suggestion {
+        text: string
+        thumbnail?: string
+        type: "suggestion" | "tag" | "channel" | "actor"
+        slug?: string
+    }
+
     // 2. Extract unique suggestions
-    const suggestions = videos.map(v => ({
+    const suggestions: Suggestion[] = videos.map(v => ({
       text: v.title,
       thumbnail: v.thumbnailUrl,
       type: "suggestion"
