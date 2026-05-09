@@ -20,7 +20,7 @@ export async function GET(req: Request) {
         const limit = parseInt(searchParams.get("limit") || "10")
         const skip = (page - 1) * limit
 
-        const query: any = {}
+        const query: any = { isShort: { $ne: true } }
         let sort: any = { createdAt: -1 }
 
         if (status === "high-dislikes") {
