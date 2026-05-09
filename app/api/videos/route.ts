@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
       let actorIds: any[] = []
       if (actors && typeof actors === "string") {
           const Actor = (await import("@/lib/models/Actor")).default
-          const actorNames = actors.split(",").map(a => a.trim()).filter(Boolean)
+          const actorNames = actors.split(",").map((a: string) => a.trim()).filter(Boolean)
           
           for (const name of actorNames) {
               const slug = name.toLowerCase().replace(/[^a-z0-9]/g, "-")
