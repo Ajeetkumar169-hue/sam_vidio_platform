@@ -47,6 +47,7 @@ export default function ChatPage() {
 
         try {
             setSending(true)
+            // Optimistic update would be complex here because we don't have the full message object from DB yet
             const res = await fetch("/api/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -56,7 +57,7 @@ export default function ChatPage() {
             
             setNewMessage("")
             setShowEmojis(false)
-            mutate() // Optimistic UI update
+            mutate() 
         } catch (err: any) {
             toast.error(err.message || "Failed to send message")
         } finally {
@@ -66,6 +67,15 @@ export default function ChatPage() {
 
     const handleDeleteMessage = async (messageId: string) => {
         if (!confirm("Are you sure you want to delete this message?")) return
+        
+        // Optimistic UI Update: Filter out the deleted message immediately
+        const optimisticData = {
+            ...data,
+            messages: messages.filter((m: any) => m._id !== messageId)
+        }
+        
+        mutate(optimisticData, false) // Update cache without revalidating yet
+
         try {
             const res = await fetch("/api/chat", {
                 method: "DELETE",
@@ -74,9 +84,10 @@ export default function ChatPage() {
             })
             if (!res.ok) throw new Error("Failed to delete")
             toast.success("Message deleted")
-            mutate()
+            mutate() // Trigger real revalidation
         } catch (err: any) {
             toast.error(err.message || "Failed to delete message")
+            mutate() // Rollback to actual data on error
         }
     }
 
