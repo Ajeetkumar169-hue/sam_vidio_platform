@@ -180,11 +180,8 @@ export function ShortsFeed() {
           key={short._id} 
           className="h-full w-full snap-start relative flex items-center justify-center"
         >
-          {/* Vertical Video Container */}
           <div className="h-full aspect-[9/16] relative bg-background shadow-2xl">
-            {index === currentIndex && (
-                <ShortPlayer src={short.videoUrl} />
-            )}
+            <ShortPlayer src={short.videoUrl} isActive={index === currentIndex} />
 
             {/* UI Overlay */}
             <div className="absolute inset-0 flex flex-col justify-end p-4 bg-gradient-to-t from-black/60 via-transparent to-transparent">
@@ -313,7 +310,7 @@ export function ShortsFeed() {
   )
 }
 
-function ShortPlayer({ src }: { src: string }) {
+function ShortPlayer({ src, isActive }: { src: string, isActive: boolean }) {
   const videoRef = useRef<HTMLVideoElement>(null)
 
   const isStreamtape = src.includes("streamtape.com/")
@@ -321,7 +318,7 @@ function ShortPlayer({ src }: { src: string }) {
   if (isStreamtape) {
     const stMatch = src.match(/streamtape\.com\/(?:v|e)\/([a-zA-Z0-9_-]+)/)
     if (stMatch) {
-      embedUrl = `https://streamtape.com/e/${stMatch[1]}`
+      embedUrl = `https://streamtape.com/e/${stMatch[1]}?autoplay=1`
     }
   }
 
@@ -345,6 +342,34 @@ function ShortPlayer({ src }: { src: string }) {
     }
   }, [src, isStreamtape])
 
+  // Handle Play/Pause based on Active State
+  useEffect(() => {
+    if (isStreamtape) return
+    const video = videoRef.current
+    if (!video) return
+
+    if (isActive) {
+      const playPromise = video.play()
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // If browser blocks unmuted auto-play, mute and retry
+          video.muted = true
+          video.play().catch(() => {})
+        })
+      }
+    } else {
+      video.pause()
+      video.currentTime = 0
+    }
+  }, [isActive, isStreamtape])
+
+  // Toggle mute on tap
+  const toggleMute = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = !videoRef.current.muted
+    }
+  }
+
   if (isStreamtape) {
     return (
       <iframe
@@ -359,11 +384,10 @@ function ShortPlayer({ src }: { src: string }) {
   return (
     <video
       ref={videoRef}
-      className="h-full w-full object-cover"
-      autoPlay
+      className="h-full w-full object-cover cursor-pointer"
       loop
-      muted={false}
       playsInline
+      onClick={toggleMute}
     />
   )
 }

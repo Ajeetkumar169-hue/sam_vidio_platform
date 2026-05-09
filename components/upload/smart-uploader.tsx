@@ -94,12 +94,98 @@ export function SmartUploader({ onUploadComplete, onFileSelected, metadata }: Sm
 
   const startUpload = async () => {
     if (!file) return
-    await doStreamtapeUpload()
+    if (metadata.isShort) {
+      await doCloudinaryUpload()
+    } else {
+      await doStreamtapeUpload()
+    }
   }
 
   /**
-   * LOCAL DEV: Direct upload via single HTTP request
+   * CLOUDINARY UPLOAD (For Shorts) - Gives raw .mp4 for auto-play and no ads
    */
+  const doCloudinaryUpload = async () => {
+    setStatus("uploading")
+    setErrorMsg(null)
+
+    try {
+      // 1. Get Signature
+      const signRes = await fetch("/api/upload/sign", { method: "POST" })
+      const signJson = await signRes.json()
+      if (!signJson.success) throw new Error("Failed to get upload signature")
+      
+      const { signature, timestamp, cloudName, apiKey } = signJson.data
+
+      // 2. Upload to Cloudinary directly
+      const formData = new FormData()
+      formData.append("file", file!)
+      formData.append("api_key", apiKey)
+      formData.append("timestamp", timestamp.toString())
+      formData.append("signature", signature)
+      formData.append("folder", "shorts")
+
+      let startTime = Date.now()
+      let lastLoaded = 0
+
+      const uploadResult = await new Promise<any>((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        xhrRef.current = xhr
+
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const pct = Math.round((e.loaded / e.total) * 95)
+            setProgress(pct)
+            const elapsed = (Date.now() - startTime) / 1000
+            const speedBytes = (e.loaded - lastLoaded) / Math.max(elapsed, 0.1)
+            setSpeed(Math.round(speedBytes / 1024 / 1024 * 10) / 10)
+            lastLoaded = e.loaded
+            startTime = Date.now()
+          }
+        }
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              resolve(JSON.parse(xhr.responseText))
+            } catch {
+              reject(new Error("Invalid response from Cloudinary"))
+            }
+          }
+          else reject(new Error(`Cloudinary error: ${xhr.status}`))
+        }
+        xhr.onerror = () => reject(new Error("Network error during upload to Cloudinary."))
+        xhr.onabort = () => reject(new Error("Upload cancelled."))
+
+        xhr.open("POST", `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`)
+        xhr.send(formData)
+      })
+
+      if (!uploadResult.secure_url) throw new Error("Cloudinary did not return a valid URL")
+
+      // 3. Finalize upload
+      const completeRes = await fetch("/api/videos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...metadata,
+          videoUrl: uploadResult.secure_url,
+          thumbnailUrl: thumbnail || uploadResult.secure_url.replace(/\.[^/.]+$/, ".jpg")
+        })
+      })
+      
+      const completeJson = await completeRes.json()
+      if (!completeJson.success) throw new Error(completeJson.error || "Database save failed")
+
+      setProgress(100)
+      setStatus("complete")
+      toast.success("Short uploaded! 🚀")
+      onUploadComplete(completeJson.data?.video || completeJson.data)
+    } catch (err: any) {
+      setStatus("error")
+      setErrorMsg(err.message)
+      toast.error(err.message)
+    }
+  }
   const doDirectUpload = async () => {
     setStatus("uploading")
     setProgress(0)
