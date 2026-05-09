@@ -94,12 +94,7 @@ export function SmartUploader({ onUploadComplete, onFileSelected, metadata }: Sm
 
   const startUpload = async () => {
     if (!file) return
-
-    if (isMockMode) {
-      await doDirectUpload()
-    } else {
-      await doStreamtapeUpload()
-    }
+    await doStreamtapeUpload()
   }
 
   /**
