@@ -116,9 +116,28 @@ export function Header({ onMenuClick }: HeaderProps) {
     return () => clearTimeout(timer)
   }, [searchQuery])
 
-  const handleSearch = (e?: React.FormEvent, term?: string) => {
+  const handleSearch = (e?: React.FormEvent, item?: any) => {
     if (e) e.preventDefault()
-    const finalQuery = term || searchQuery.trim()
+    
+    // If it's a suggestion object
+    if (item && typeof item === "object") {
+        const term = item.text
+        const newHistory = [term, ...history.filter(h => h !== term)].slice(0, 10)
+        setHistory(newHistory)
+        localStorage.setItem("search_history", JSON.stringify(newHistory))
+        setShowSuggestions(false)
+
+        if (item.type === "channel") {
+            router.push(`/channel/${item.slug}`)
+        } else if (item.type === "actor") {
+            router.push(`/actors/${item.slug}`)
+        } else {
+            router.push(`/search?q=${encodeURIComponent(term)}`)
+        }
+        return
+    }
+
+    const finalQuery = (typeof item === "string" ? item : searchQuery).trim()
     if (finalQuery) {
       // Save to history
       const newHistory = [finalQuery, ...history.filter(h => h !== finalQuery)].slice(0, 10)
@@ -181,16 +200,32 @@ export function Header({ onMenuClick }: HeaderProps) {
                         ))}
 
                         {/* Suggestion Items */}
-                        {suggestions.map((s) => (
+                        {suggestions.map((s, idx) => (
                             <div 
-                              key={s.text}
-                              onClick={() => handleSearch(undefined, s.text)}
+                              key={`${s.text}-${idx}`}
+                              onClick={() => handleSearch(undefined, s)}
                               className="flex items-center gap-3 px-3 py-2.5 hover:bg-foreground/5 rounded-xl cursor-pointer group"
                             >
-                                <Search className="h-4 w-4 text-muted-foreground/40" />
-                                <span className="flex-1 text-sm font-bold truncate">{s.text}</span>
+                                {s.type === "channel" ? <User className="h-4 w-4 text-primary/40" /> :
+                                 s.type === "actor" ? <Film className="h-4 w-4 text-primary/40" /> :
+                                 <Search className="h-4 w-4 text-muted-foreground/40" />}
+                                
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-bold truncate">{s.text}</span>
+                                        {s.type !== "suggestion" && s.type !== "tag" && (
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-primary/40 bg-primary/5 px-1.5 py-0.5 rounded-full">
+                                                {s.type}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
                                 {s.thumbnail && (
-                                    <div className="h-8 w-12 rounded-lg bg-foreground/5 overflow-hidden border border-foreground/10 shrink-0">
+                                    <div className={cn(
+                                        "h-9 w-12 rounded-lg bg-foreground/5 overflow-hidden border border-foreground/10 shrink-0",
+                                        (s.type === "channel" || s.type === "actor") && "w-9 rounded-full"
+                                    )}>
                                         <img src={s.thumbnail} className="h-full w-full object-cover" alt="" />
                                     </div>
                                 )}
@@ -251,16 +286,32 @@ export function Header({ onMenuClick }: HeaderProps) {
                                 <ArrowUpLeft className="h-5 w-5 text-muted-foreground/20" />
                             </div>
                         ))}
-                        {suggestions.map((s) => (
+                        {suggestions.map((s, idx) => (
                             <div 
-                              key={s.text}
-                              onClick={() => handleSearch(undefined, s.text)}
+                              key={`${s.text}-${idx}`}
+                              onClick={() => handleSearch(undefined, s)}
                               className="flex items-center gap-4 px-4 py-3.5 hover:bg-foreground/5 rounded-xl cursor-pointer group"
                             >
-                                <Search className="h-5 w-5 text-muted-foreground/40" />
-                                <span className="flex-1 text-sm font-bold truncate">{s.text}</span>
+                                {s.type === "channel" ? <User className="h-5 w-5 text-primary/40" /> :
+                                 s.type === "actor" ? <Film className="h-5 w-5 text-primary/40" /> :
+                                 <Search className="h-5 w-5 text-muted-foreground/40" />}
+                                
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-bold truncate">{s.text}</span>
+                                        {s.type !== "suggestion" && s.type !== "tag" && (
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-primary/40 bg-primary/5 px-1.5 py-0.5 rounded-full">
+                                                {s.type}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
                                 {s.thumbnail && (
-                                    <div className="h-9 w-14 rounded-lg bg-foreground/5 overflow-hidden border border-foreground/10 shrink-0">
+                                    <div className={cn(
+                                        "h-10 w-14 rounded-lg bg-foreground/5 overflow-hidden border border-foreground/10 shrink-0",
+                                        (s.type === "channel" || s.type === "actor") && "w-10 rounded-full"
+                                    )}>
                                         <img src={s.thumbnail} className="h-full w-full object-cover" alt="" />
                                     </div>
                                 )}
