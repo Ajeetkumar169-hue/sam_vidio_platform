@@ -96,9 +96,14 @@ export function VideoPlayer({ url, poster, className = "", qualities = [] }: Vid
       return
     }
 
-    if (currentUrl.includes("streamtape.com/e/")) {
+    if (currentUrl.includes("streamtape.com/")) {
       setPlayerType("iframe")
-      setEmbedUrl(currentUrl)
+      const stMatch = currentUrl.match(/streamtape\.com\/(?:v|e)\/([a-zA-Z0-9_-]+)/);
+      if (stMatch) {
+        setEmbedUrl(`https://streamtape.com/e/${stMatch[1]}`)
+      } else {
+        setEmbedUrl(currentUrl)
+      }
       return
     }
 
