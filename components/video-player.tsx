@@ -79,6 +79,17 @@ export function VideoPlayer({ url, poster, className = "", qualities = [] }: Vid
 
   useEffect(() => {
     if (!currentUrl) return
+    if (currentUrl.includes("streamtape.com/")) {
+      setPlayerType("iframe")
+      const stMatch = currentUrl.match(/streamtape\.com\/(?:v|e)\/([a-zA-Z0-9_-]+)/);
+      if (stMatch) {
+        setEmbedUrl(`https://streamtape.com/e/${stMatch[1]}`)
+      } else {
+        setEmbedUrl(currentUrl)
+      }
+      return
+    }
+
     const isDirectVideo = currentUrl.match(/\.(mp4|webm|ogg|mov|m4v|m3u8|mpd)$|^(\/uploads\/)/i) || 
                          (currentUrl.includes("s3.") && !currentUrl.includes("youtube.com")) ||
                          (currentUrl.includes("digitaloceanspaces.com")) ||
@@ -93,17 +104,6 @@ export function VideoPlayer({ url, poster, className = "", qualities = [] }: Vid
     if (ytMatch) {
       setPlayerType("iframe")
       setEmbedUrl(`https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1`)
-      return
-    }
-
-    if (currentUrl.includes("streamtape.com/")) {
-      setPlayerType("iframe")
-      const stMatch = currentUrl.match(/streamtape\.com\/(?:v|e)\/([a-zA-Z0-9_-]+)/);
-      if (stMatch) {
-        setEmbedUrl(`https://streamtape.com/e/${stMatch[1]}`)
-      } else {
-        setEmbedUrl(currentUrl)
-      }
       return
     }
 
