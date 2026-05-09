@@ -312,6 +312,7 @@ export function ShortsFeed() {
 
 function ShortPlayer({ src, isActive }: { src: string, isActive: boolean }) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const [isMuted, setIsMuted] = useState(true) // Start muted for guaranteed auto-play
 
   const isStreamtape = src.includes("streamtape.com/")
   let embedUrl = src
@@ -349,10 +350,12 @@ function ShortPlayer({ src, isActive }: { src: string, isActive: boolean }) {
     if (!video) return
 
     if (isActive) {
+      video.muted = isMuted // ensure video element matches state before playing
       const playPromise = video.play()
       if (playPromise !== undefined) {
         playPromise.catch(() => {
-          // If browser blocks unmuted auto-play, mute and retry
+          // If browser still blocks, force mute
+          setIsMuted(true)
           video.muted = true
           video.play().catch(() => {})
         })
@@ -361,12 +364,13 @@ function ShortPlayer({ src, isActive }: { src: string, isActive: boolean }) {
       video.pause()
       video.currentTime = 0
     }
-  }, [isActive, isStreamtape])
+  }, [isActive, isStreamtape, isMuted])
 
   // Toggle mute on tap
   const toggleMute = () => {
+    setIsMuted(prev => !prev)
     if (videoRef.current) {
-      videoRef.current.muted = !videoRef.current.muted
+      videoRef.current.muted = !isMuted
     }
   }
 
@@ -382,13 +386,20 @@ function ShortPlayer({ src, isActive }: { src: string, isActive: boolean }) {
   }
 
   return (
-    <video
-      ref={videoRef}
-      className="h-full w-full object-cover cursor-pointer"
-      loop
-      playsInline
-      onClick={toggleMute}
-    />
+    <div className="relative h-full w-full group cursor-pointer" onClick={toggleMute}>
+        <video
+        ref={videoRef}
+        className="h-full w-full object-cover"
+        loop
+        playsInline
+        muted={isMuted}
+        />
+        {isMuted && (
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/50 p-4 rounded-full pointer-events-none animate-pulse">
+                <p className="text-white font-bold text-xs">Tap to Unmute</p>
+            </div>
+        )}
+    </div>
   )
 }
 
