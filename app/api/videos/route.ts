@@ -50,7 +50,17 @@ export async function GET(req: NextRequest) {
       ]
     }
 
-    if (search) query.$text = { $search: search }
+    if (search) {
+        const Actor = (await import("@/lib/models/Actor")).default
+        const matchingActors = await Actor.find({ name: { $regex: search, $options: "i" } }).select("_id")
+        const actorIds = matchingActors.map(a => a._id)
+
+        query.$or = [
+            { title: { $regex: search, $options: "i" } },
+            { tags: { $in: [new RegExp(search, "i")] } },
+            { actors: { $in: actorIds } }
+        ]
+    }
 
     let sortOptions: any = { createdAt: -1, _id: -1 }
     if (sort === "trending" || sort === "popular") sortOptions = { views: -1, _id: -1 }
@@ -108,17 +118,22 @@ export async function POST(req: NextRequest) {
 
       // Process Actors
       let actorIds: any[] = []
-      if (actors && typeof actors === "string") {
+      if (actors) {
           const Actor = (await import("@/lib/models/Actor")).default
-          const actorNames = actors.split(",").map((a: string) => a.trim()).filter(Boolean)
-          
-          for (const name of actorNames) {
-              const slug = name.toLowerCase().replace(/[^a-z0-9]/g, "-")
-              let actor = await Actor.findOne({ $or: [{ name }, { slug }] }).session(session)
-              if (!actor) {
-                  actor = (await Actor.create([{ name, slug }], { session }))[0]
+          if (Array.isArray(actors)) {
+              // Array of IDs from dropdown
+              actorIds = actors
+          } else if (typeof actors === "string") {
+              // Comma-separated names from legacy/other inputs
+              const actorNames = actors.split(",").map((a: string) => a.trim()).filter(Boolean)
+              for (const name of actorNames) {
+                  const slug = name.toLowerCase().replace(/[^a-z0-9]/g, "-")
+                  let actor = await Actor.findOne({ $or: [{ name }, { slug }] }).session(session)
+                  if (!actor) {
+                      actor = (await Actor.create([{ name, slug }], { session }))[0]
+                  }
+                  actorIds.push(actor._id)
               }
-              actorIds.push(actor._id)
           }
       }
 

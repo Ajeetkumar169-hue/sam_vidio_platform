@@ -4,10 +4,19 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Badge } from "@/components/ui/badge"
+import { X } from "lucide-react"
 
 interface Category {
     _id?: string;
     id?: string;
+    name: string;
+}
+
+interface Actor {
+    _id: string;
     name: string;
 }
 
@@ -17,14 +26,23 @@ interface VideoMetadataFormProps {
         description: string;
         categoryId: string;
         tags: string;
-        actors: string;
+        actors: string[];
         visibility: string;
     };
-    onChange: (field: string, value: string) => void;
+    onChange: (field: string, value: any) => void;
     categories: Category[];
+    actors: Actor[];
 }
 
-export function VideoMetadataForm({ data, onChange, categories }: VideoMetadataFormProps) {
+export function VideoMetadataForm({ data, onChange, categories, actors }: VideoMetadataFormProps) {
+    const toggleActor = (actorId: string) => {
+        const current = data.actors || []
+        if (current.includes(actorId)) {
+            onChange("actors", current.filter(id => id !== actorId))
+        } else {
+            onChange("actors", [...current, actorId])
+        }
+    }
     return (
         <div className="space-y-6">
             <div className="space-y-4">
@@ -94,14 +112,50 @@ export function VideoMetadataForm({ data, onChange, categories }: VideoMetadataF
                 </div>
 
                 <div className="flex flex-col gap-2">
-                    <Label htmlFor="actors" className="text-base font-bold text-primary">Actors (Performers)</Label>
-                    <Input
-                        id="actors"
-                        placeholder="Actor 1, Actor 2, Actor 3"
-                        value={data.actors}
-                        onChange={(e) => onChange("actors", e.target.value)}
-                        className="h-12 bg-secondary/30 border-none rounded-xl focus:ring-1 focus:ring-primary font-bold"
-                    />
+                    <Label className="text-base font-bold text-primary">Actors (Select one or more)</Label>
+                    <div className="border border-border/50 rounded-2xl bg-secondary/20 p-4 space-y-4">
+                        {/* Selected Actors Badges */}
+                        <div className="flex flex-wrap gap-2">
+                            {data.actors?.length > 0 ? (
+                                data.actors.map(id => {
+                                    const actor = actors.find(a => a._id === id)
+                                    return actor ? (
+                                        <Badge key={id} variant="secondary" className="pl-3 pr-1 py-1 gap-1 rounded-full bg-primary/10 text-primary border-primary/20">
+                                            {actor.name}
+                                            <button onClick={() => toggleActor(id)} className="hover:bg-primary/20 rounded-full p-0.5">
+                                                <X className="h-3 w-3" />
+                                            </button>
+                                        </Badge>
+                                    ) : null
+                                })
+                            ) : (
+                                <p className="text-xs text-muted-foreground italic">No actors selected</p>
+                            )}
+                        </div>
+
+                        {/* Actor Selection List */}
+                        <ScrollArea className="h-[150px] pr-4">
+                            <div className="grid grid-cols-2 gap-2">
+                                {actors.map(actor => (
+                                    <div 
+                                        key={actor._id} 
+                                        className={`flex items-center space-x-3 p-2 rounded-xl transition-colors cursor-pointer hover:bg-secondary/40 ${data.actors?.includes(actor._id) ? "bg-primary/5" : ""}`}
+                                        onClick={() => toggleActor(actor._id)}
+                                    >
+                                        <Checkbox 
+                                            id={`actor-${actor._id}`} 
+                                            checked={data.actors?.includes(actor._id)}
+                                            onCheckedChange={() => {}} // Handled by div onClick
+                                            className="rounded-md"
+                                        />
+                                        <label htmlFor={`actor-${actor._id}`} className="text-sm font-medium leading-none cursor-pointer">
+                                            {actor.name}
+                                        </label>
+                                    </div>
+                                ))}
+                            </div>
+                        </ScrollArea>
+                    </div>
                 </div>
             </div>
         </div>

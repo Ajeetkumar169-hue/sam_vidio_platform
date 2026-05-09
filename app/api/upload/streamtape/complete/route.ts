@@ -31,17 +31,20 @@ export async function POST(req: NextRequest) {
 
       // Process Actors
       let actorIds: any[] = []
-      if (metadata.actors && typeof metadata.actors === "string") {
+      if (metadata.actors) {
           const Actor = (await import("@/lib/models/Actor")).default
-          const actorNames = metadata.actors.split(",").map((a: string) => a.trim()).filter(Boolean)
-          
-          for (const name of actorNames) {
-              const slug = name.toLowerCase().replace(/[^a-z0-9]/g, "-")
-              let actor = await Actor.findOne({ $or: [{ name }, { slug }] }).session(session)
-              if (!actor) {
-                  actor = (await Actor.create([{ name, slug }], { session }))[0]
+          if (Array.isArray(metadata.actors)) {
+              actorIds = metadata.actors
+          } else if (typeof metadata.actors === "string") {
+              const actorNames = metadata.actors.split(",").map((a: string) => a.trim()).filter(Boolean)
+              for (const name of actorNames) {
+                  const slug = name.toLowerCase().replace(/[^a-z0-9]/g, "-")
+                  let actor = await Actor.findOne({ $or: [{ name }, { slug }] }).session(session)
+                  if (!actor) {
+                      actor = (await Actor.create([{ name, slug }], { session }))[0]
+                  }
+                  actorIds.push(actor._id)
               }
-              actorIds.push(actor._id)
           }
       }
       const videoData = {

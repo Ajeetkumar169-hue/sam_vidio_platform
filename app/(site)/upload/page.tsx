@@ -16,6 +16,7 @@ export default function UploadPage() {
     const { user, isLoading: authLoading } = useAuth()
     const router = useRouter()
     const [categories, setCategories] = useState([])
+    const [actors, setActors] = useState([])
     const [activeTab, setActiveTab] = useState("device")
     const [isComplete, setIsComplete] = useState(false)
     const [uploadedVideo, setUploadedVideo] = useState<any>(null)
@@ -28,7 +29,7 @@ export default function UploadPage() {
         description: "",
         categoryId: "",
         tags: "",
-        actors: "",
+        actors: [] as string[],
         visibility: "public",
         videoUrl: ""
     })
@@ -38,13 +39,18 @@ export default function UploadPage() {
             .then(r => r.json())
             .then(d => setCategories(d.data?.categories || d.categories || []))
             .catch(() => {})
+
+        fetch("/api/admin/actors")
+            .then(r => r.json())
+            .then(d => setActors(d.data?.actors || []))
+            .catch(() => {})
     }, [])
 
     useEffect(() => {
         if (!authLoading && !user) router.push("/login")
     }, [user, authLoading, router])
 
-    const handleFormChange = (field: string, value: string) => {
+    const handleFormChange = (field: string, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }))
     }
 
@@ -194,6 +200,7 @@ export default function UploadPage() {
                                             <VideoMetadataForm 
                                                 data={formData}
                                                 categories={categories}
+                                                actors={actors}
                                                 onChange={handleFormChange}
                                             />
                                         ) : (
