@@ -61,8 +61,8 @@ export function SmartUploader({ onUploadComplete, onFileSelected, metadata }: Sm
   useEffect(() => {
     fetch("/api/config")
       .then(r => r.json())
-      .then(d => setIsMockMode(d.data?.mockMode ?? true))
-      .catch(() => setIsMockMode(true))
+      .then(d => setIsMockMode(d.data?.isMock ?? false))
+      .catch(() => setIsMockMode(false))
   }, [])
 
   // S3 chunked upload state
