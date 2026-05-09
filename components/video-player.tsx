@@ -89,6 +89,7 @@ export function VideoPlayer({ url, poster, className = "", qualities = [] }: Vid
       return
     }
 
+    const ytMatch = currentUrl.match(/(?:\?v=|&v=|youtu\.be\/|\/embed\/|\/v\/|youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/)
     if (ytMatch) {
       setPlayerType("iframe")
       setEmbedUrl(`https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1`)
