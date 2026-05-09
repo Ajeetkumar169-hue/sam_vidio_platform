@@ -21,7 +21,8 @@ const ActorSchema = new Schema<IActor>(
   { timestamps: true }
 )
 
-ActorSchema.index({ name: "text" })
+ActorSchema.index({ slug: 1 })
+ActorSchema.index({ name: "text", bio: "text" })
 
 const Actor: Model<IActor> = mongoose.models.Actor || mongoose.model<IActor>("Actor", ActorSchema)
 export default Actor

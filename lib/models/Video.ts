@@ -76,7 +76,8 @@ const VideoSchema = new Schema<IVideo>(
 VideoSchema.index({ status: 1, isDeleted: 1, category: 1, createdAt: -1 })
 VideoSchema.index({ status: 1, isDeleted: 1, createdAt: -1, _id: -1 }) // Stable sort cursor index
 VideoSchema.index({ isShort: 1, status: 1, isDeleted: 1, createdAt: -1 })
-VideoSchema.index({ title: "text", tags: "text" }) // High-speed search index
+VideoSchema.index({ actors: 1, status: 1, isDeleted: 1 }) // Speed up actor profile pages
+VideoSchema.index({ title: "text", tags: "text", description: "text" }) // High-speed search index
 
 const Video: Model<IVideo> = mongoose.models.Video || mongoose.model<IVideo>("Video", VideoSchema)
 export default Video

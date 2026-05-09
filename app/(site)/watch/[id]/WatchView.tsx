@@ -5,14 +5,23 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useAuth } from "@/lib/auth-context"
 import { VideoCard } from "@/components/video-card"
-import { CommentsSection } from "@/components/comments-section"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
-import { VideoPlayer } from "@/components/video-player"
-import { DownloadButton } from "@/components/download-button"
-import { ShareDialog } from "@/components/share-dialog"
+import dynamic from "next/dynamic"
 import { ThumbsUp, Eye, Users, Clock, Tag, Trash2, Share2, DownloadCloud, Bookmark, MoreVertical, MessageSquare } from "lucide-react"
+
+// Dynamic imports for performance
+const VideoPlayer = dynamic(() => import("@/components/video-player").then(mod => mod.VideoPlayer), { 
+  ssr: false, 
+  loading: () => <Skeleton className="h-full w-full rounded-2xl" /> 
+})
+const CommentsSection = dynamic(() => import("@/components/comments-section").then(mod => mod.CommentsSection), { 
+  ssr: false,
+  loading: () => <Skeleton className="h-[200px] w-full rounded-2xl" /> 
+})
+const DownloadButton = dynamic(() => import("@/components/download-button").then(mod => mod.DownloadButton), { ssr: false })
+const ShareDialog = dynamic(() => import("@/components/share-dialog").then(mod => mod.ShareDialog), { ssr: false })
 import { cn } from "@/lib/utils"
 import { SubscribeButton } from "@/components/subscribe-button"
 
