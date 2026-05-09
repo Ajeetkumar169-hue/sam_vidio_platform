@@ -98,7 +98,7 @@ export function SmartUploader({ onUploadComplete, onFileSelected, metadata }: Sm
     if (isMockMode) {
       await doDirectUpload()
     } else {
-      await doS3ChunkedUpload()
+      await doStreamtapeUpload()
     }
   }
 
@@ -163,96 +163,83 @@ export function SmartUploader({ onUploadComplete, onFileSelected, metadata }: Sm
   }
 
   /**
-   * PRODUCTION (Vercel + S3): Chunked multipart upload directly to S3
+   * PRODUCTION (Vercel): Direct upload to Streamtape API
    */
-  const doS3ChunkedUpload = async () => {
+  const doStreamtapeUpload = async () => {
     setStatus("uploading")
     pausedRef.current = false
     setErrorMsg(null)
 
-    const CHUNK_SIZE = 5 * 1024 * 1024 // 5MB
-    const totalParts = Math.ceil(file!.size / CHUNK_SIZE)
-
     try {
-      // Init or restore session
-      let session = uploadStateRef.current
-      if (!session) {
-        const initRes = await fetch("/api/upload/init", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ filename: file!.name, contentType: file!.type, fileSize: file!.size })
-        })
-        const initJson = await initRes.json()
-        if (!initJson.success) throw new Error(initJson.error || "Failed to initialize upload")
-        session = { uploadId: initJson.data.uploadId, key: initJson.data.key, parts: [], uploaded: 0 }
-        uploadStateRef.current = session
-      }
+      // 1. Get Streamtape Upload URL from our backend
+      const initRes = await fetch("/api/upload/streamtape/init")
+      const initJson = await initRes.json()
+      if (!initJson.success) throw new Error(initJson.error || "Failed to initialize Streamtape upload")
+      
+      const uploadUrl = initJson.data.url
 
-      const doneParts = new Set(session.parts.map((p: any) => p.PartNumber))
+      // 2. Upload file to Streamtape
+      const formData = new FormData()
+      formData.append("file1", file!)
+
       let startTime = Date.now()
+      let lastLoaded = 0
 
-      for (let partNum = 1; partNum <= totalParts; partNum++) {
-        if (pausedRef.current) {
-          setStatus("paused")
-          return
+      const uploadResult = await new Promise<any>((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        xhrRef.current = xhr
+
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const pct = Math.round((e.loaded / e.total) * 95)
+            setProgress(pct)
+            const elapsed = (Date.now() - startTime) / 1000
+            const speedBytes = (e.loaded - lastLoaded) / Math.max(elapsed, 0.1)
+            setSpeed(Math.round(speedBytes / 1024 / 1024 * 10) / 10)
+            lastLoaded = e.loaded
+            startTime = Date.now()
+          }
         }
-        if (doneParts.has(partNum)) continue
 
-        const start = (partNum - 1) * CHUNK_SIZE
-        const end = Math.min(start + CHUNK_SIZE, file!.size)
-        const chunk = file!.slice(start, end)
-
-        // Get signed URL for this part
-        let url = ""
-        for (let attempt = 0; attempt < 3; attempt++) {
-          const urlRes = await fetch("/api/upload/url", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ key: session.key, uploadId: session.uploadId, partNumber: partNum })
-          })
-          const urlJson = await urlRes.json()
-          if (urlJson.success && urlJson.data?.url) { url = urlJson.data.url; break }
-          await new Promise(r => setTimeout(r, 2000 * (attempt + 1)))
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              resolve(JSON.parse(xhr.responseText))
+            } catch {
+              reject(new Error("Invalid response from Streamtape"))
+            }
+          }
+          else reject(new Error(`Streamtape error: ${xhr.status}`))
         }
-        if (!url) throw new Error(`Failed to get upload URL for part ${partNum}`)
+        xhr.onerror = () => reject(new Error("Network error during upload to Streamtape."))
+        xhr.onabort = () => reject(new Error("Upload cancelled."))
 
-        // Upload chunk directly to S3
-        const putRes = await fetch(url, {
-          method: "PUT",
-          body: chunk,
-          headers: { "Content-Type": "application/octet-stream" }
-        })
-        if (!putRes.ok) throw new Error(`Chunk ${partNum} upload failed: HTTP ${putRes.status}`)
-        const etag = putRes.headers.get("ETag")?.replace(/"/g, "") || `etag-${partNum}`
+        xhr.open("POST", uploadUrl)
+        xhr.send(formData)
+      })
 
-        session.parts.push({ PartNumber: partNum, ETag: etag })
-        session.uploaded += chunk.size
-
-        const pct = Math.round((partNum / totalParts) * 95)
-        const elapsed = (Date.now() - startTime) / 1000
-        setProgress(pct)
-        setSpeed(Math.round((chunk.size / elapsed) / 1024 / 1024 * 10) / 10)
-        startTime = Date.now()
+      if (uploadResult.status !== 200 || !uploadResult.result?.url) {
+        throw new Error("Streamtape upload failed or returned invalid data")
       }
 
-      // Finalize
-      const completeRes = await fetch("/api/upload/complete", {
+      // 3. Finalize upload in our database
+      const completeRes = await fetch("/api/upload/streamtape/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          key: session.key,
-          uploadId: session.uploadId,
-          parts: session.parts.sort((a: any, b: any) => a.PartNumber - b.PartNumber),
-          metadata: { ...metadata, thumbnailUrl: thumbnail || undefined, fileSize: file!.size }
+          fileId: uploadResult.result.id || Date.now().toString(),
+          videoUrl: uploadResult.result.url,
+          fileSize: file!.size,
+          metadata: { ...metadata, thumbnailUrl: thumbnail || undefined }
         })
       })
+      
       const completeJson = await completeRes.json()
-      if (!completeJson.success) throw new Error(completeJson.error || "Finalization failed")
+      if (!completeJson.success) throw new Error(completeJson.error || "Database save failed")
 
-      uploadStateRef.current = null
       setProgress(100)
       setStatus("complete")
-      toast.success("Video uploaded to S3! 🚀")
+      toast.success("Video uploaded to Streamtape! 🚀")
       onUploadComplete(completeJson.data?.video || completeJson.data)
     } catch (err: any) {
       setStatus("error")
@@ -268,7 +255,7 @@ export function SmartUploader({ onUploadComplete, onFileSelected, metadata }: Sm
 
   const resumeUpload = () => {
     pausedRef.current = false
-    doS3ChunkedUpload()
+    doStreamtapeUpload()
   }
 
   const clearFile = () => {
@@ -311,7 +298,7 @@ export function SmartUploader({ onUploadComplete, onFileSelected, metadata }: Sm
             <div className="space-y-1">
               <p className="text-xl font-black text-primary italic uppercase tracking-tighter">Upload Video</p>
               <p className="text-sm font-bold text-muted-foreground">
-                {isMockMode === false ? "S3 Direct • No size limit" : "Local Upload • Auto Thumbnail"}
+                {isMockMode === false ? "Streamtape Upload • Unlimited" : "Local Upload • Auto Thumbnail"}
               </p>
             </div>
             <Button type="button" className="mt-2 rounded-full px-8 font-bold">Select Video</Button>
