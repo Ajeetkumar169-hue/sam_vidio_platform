@@ -92,6 +92,19 @@ export function ShortsFeed() {
       router.push("/login")
       return
     }
+
+    const prevStatus = likedStatus[videoId] || { liked: false, disliked: false, likes: 0 }
+    
+    // Optimistic Update
+    setLikedStatus(prev => ({
+        ...prev,
+        [videoId]: {
+            liked: !prevStatus.liked,
+            disliked: !prevStatus.liked ? false : prevStatus.disliked,
+            likes: prevStatus.liked ? Math.max(0, prevStatus.likes - 1) : prevStatus.likes + 1
+        }
+    }))
+
     try {
       const res = await fetch(`/api/videos/${videoId}/like`, {
         method: "POST",
@@ -109,6 +122,8 @@ export function ShortsFeed() {
       }))
     } catch {
       toast.error("Failed to like")
+      // Revert
+      setLikedStatus(prev => ({ ...prev, [videoId]: prevStatus }))
     }
   }
 
@@ -117,6 +132,19 @@ export function ShortsFeed() {
       router.push("/login")
       return
     }
+
+    const prevStatus = likedStatus[videoId] || { liked: false, disliked: false, likes: 0 }
+    
+    // Optimistic Update
+    setLikedStatus(prev => ({
+        ...prev,
+        [videoId]: {
+            disliked: !prevStatus.disliked,
+            liked: !prevStatus.disliked ? false : prevStatus.liked,
+            likes: (!prevStatus.disliked && prevStatus.liked) ? Math.max(0, prevStatus.likes - 1) : prevStatus.likes
+        }
+    }))
+
     try {
       const res = await fetch(`/api/videos/${videoId}/like`, {
         method: "POST",
@@ -134,6 +162,8 @@ export function ShortsFeed() {
       }))
     } catch {
       toast.error("Failed to dislike")
+      // Revert
+      setLikedStatus(prev => ({ ...prev, [videoId]: prevStatus }))
     }
   }
 

@@ -121,6 +121,20 @@ export function WatchView({ initialVideo }: WatchViewProps) {
       router.push("/login")
       return
     }
+
+    // Optimistic Update
+    const prevLiked = liked
+    const prevDisliked = disliked
+    const prevLikeCount = likeCount
+    const prevDislikeCount = dislikeCount
+
+    setLiked(!prevLiked)
+    setLikeCount(prev => prevLiked ? Math.max(0, prev - 1) : prev + 1)
+    if (!prevLiked && prevDisliked) {
+       setDisliked(false)
+       setDislikeCount(prev => Math.max(0, prev - 1))
+    }
+
     try {
       const res = await fetch(`/api/videos/${videoId}/like`, { 
         method: "POST",
@@ -131,23 +145,39 @@ export function WatchView({ initialVideo }: WatchViewProps) {
       
       if (data.liked !== undefined) {
         setLiked(data.liked)
-        if (data.liked && disliked) {
-           setDisliked(false)
-           setDislikeCount(prev => Math.max(0, prev - 1))
-        }
+        setDisliked(data.disliked)
         setLikeCount(data.likes)
         setDislikeCount(data.dislikes)
       }
     } catch {
       toast.error("Failed to like")
+      // Revert on error
+      setLiked(prevLiked)
+      setDisliked(prevDisliked)
+      setLikeCount(prevLikeCount)
+      setDislikeCount(prevDislikeCount)
     }
-  }, [user, videoId, router, disliked])
+  }, [user, videoId, router, liked, disliked, likeCount, dislikeCount])
 
   const handleDislike = useCallback(async () => {
     if (!user) {
       router.push("/login")
       return
     }
+
+    // Optimistic Update
+    const prevLiked = liked
+    const prevDisliked = disliked
+    const prevLikeCount = likeCount
+    const prevDislikeCount = dislikeCount
+
+    setDisliked(!prevDisliked)
+    setDislikeCount(prev => prevDisliked ? Math.max(0, prev - 1) : prev + 1)
+    if (!prevDisliked && prevLiked) {
+       setLiked(false)
+       setLikeCount(prev => Math.max(0, prev - 1))
+    }
+
     try {
       const res = await fetch(`/api/videos/${videoId}/like`, { 
         method: "POST",
@@ -158,17 +188,19 @@ export function WatchView({ initialVideo }: WatchViewProps) {
       
       if (data.disliked !== undefined) {
         setDisliked(data.disliked)
-        if (data.disliked && liked) {
-           setLiked(false)
-           setLikeCount(prev => Math.max(0, prev - 1))
-        }
+        setLiked(data.liked)
         setDislikeCount(data.dislikes)
         setLikeCount(data.likes)
       }
     } catch {
       toast.error("Failed to dislike")
+      // Revert on error
+      setLiked(prevLiked)
+      setDisliked(prevDisliked)
+      setLikeCount(prevLikeCount)
+      setDislikeCount(prevDislikeCount)
     }
-  }, [user, videoId, router, liked])
+  }, [user, videoId, router, liked, disliked, likeCount, dislikeCount])
 
 
   const handleDelete = async () => {

@@ -106,18 +106,15 @@ export function SubscribeButton({
         variant={variant || (isSubscribed ? "secondary" : "default")}
         size={size}
         onClick={handleToggle}
-        disabled={loading || isChecking}
+        disabled={isChecking}
         className={cn(
           "relative overflow-hidden transition-all duration-300 rounded-full font-bold",
           !isSubscribed && "bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20",
-          isSubscribed && "bg-secondary text-foreground hover:bg-secondary/80",
-          loading && "opacity-80"
+          isSubscribed && "bg-secondary text-foreground hover:bg-secondary/80"
         )}
       >
         <div className="flex items-center gap-2">
-          {loading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : isSubscribed ? (
+          {isSubscribed ? (
             <BellRing className="h-4 w-4 fill-current" />
           ) : (
             <Bell className="h-4 w-4" />
