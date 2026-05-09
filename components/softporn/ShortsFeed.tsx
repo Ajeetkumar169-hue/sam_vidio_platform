@@ -418,11 +418,12 @@ function ShortPlayer({ src, isActive }: { src: string, isActive: boolean }) {
   return (
     <div className="relative h-full w-full group cursor-pointer" onClick={toggleMute}>
         <video
-        ref={videoRef}
-        className="h-full w-full object-cover"
-        loop
-        playsInline
-        muted={isMuted}
+          ref={videoRef}
+          className="h-full w-full object-cover"
+          loop
+          playsInline
+          autoPlay={isActive}
+          muted={isMuted}
         />
         {isMuted && (
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/50 p-4 rounded-full pointer-events-none animate-pulse">
