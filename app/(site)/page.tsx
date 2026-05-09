@@ -9,6 +9,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TrendingUp, Clock, Star, ChevronRight, Users, MessageCircle } from "lucide-react"
+import { PopularChannelsMarquee } from "@/components/popular-channels-marquee"
 
 interface Video {
   _id?: string
@@ -58,7 +59,7 @@ export default function HomePage() {
           fetch("/api/videos?sort=trending&limit=8").then((r) => r.ok ? r.json() : { videos: [] }).catch(() => ({ videos: [] })),
           fetch("/api/videos?sort=latest&limit=8").then((r) => r.ok ? r.json() : { videos: [] }).catch(() => ({ videos: [] })),
           fetch("/api/videos?sort=top-rated&limit=8").then((r) => r.ok ? r.json() : { videos: [] }).catch(() => ({ videos: [] })),
-          fetch("/api/channels?limit=6").then((r) => r.ok ? r.json() : { channels: [] }).catch(() => ({ channels: [] })),
+          fetch("/api/channels?limit=12").then((r) => r.ok ? r.json() : { channels: [] }).catch(() => ({ channels: [] })),
           fetch("/api/categories").then((r) => r.ok ? r.json() : { categories: [] }).catch(() => ({ categories: [] })),
         ])
         setTrending(trendingRes.data?.videos || trendingRes.videos || [])
@@ -156,23 +157,7 @@ export default function HomePage() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-6">
-              {channels.map((ch) => (
-                <Link
-                  key={ch._id || ch.id}
-                  href={`/channel/${ch.slug}`}
-                  className="group flex flex-col items-center gap-2 rounded-lg p-3 transition-colors hover:bg-secondary"
-                >
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-xl font-bold text-primary transition-transform group-hover:scale-110">
-                    {ch.name.charAt(0).toUpperCase()}
-                  </div>
-                  <p className="text-center text-sm font-medium text-foreground">{ch.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {ch.subscriberCount} subscribers
-                  </p>
-                </Link>
-              ))}
-            </div>
+            <PopularChannelsMarquee channels={channels} />
           )}
         </section>
       )}
