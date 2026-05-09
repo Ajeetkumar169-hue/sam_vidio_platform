@@ -28,7 +28,7 @@ export interface IVideo {
   qualities?: Array<{ label: string; url: string; size?: number }>
   storageType?: "cloudinary" | "s3" | "link"
   uploadId?: string // Idempotency key
-  isShort?: boolean // SoftPorn Shorts flag
+  isShort?: boolean // Shorts flag
   isDeleted?: boolean // Future-proofing
   channelName?: string
   channelAvatar?: string
@@ -65,7 +65,7 @@ const VideoSchema = new Schema<IVideo>(
     ],
     storageType: { type: String, enum: ["cloudinary", "s3", "link"], default: "s3" },
     uploadId: { type: String, unique: true, sparse: true },
-    isShort: { type: Boolean, default: false },
+    isShort: { type: Boolean, default: false }, // Shorts flag
     isDeleted: { type: Boolean, default: false },
     channelName: { type: String },
     channelAvatar: { type: String },
