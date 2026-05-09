@@ -223,7 +223,7 @@ export function WatchView({ initialVideo }: WatchViewProps) {
             </div>
 
             {/* 3. Actions Bar (PC vs Mobile handled via flex-col/row) */}
-            <div className="mt-4 px-4 lg:px-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="mt-4 px-4 lg:px-0 flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-4 flex-wrap">
               
               {/* Channel Section */}
               <div className="flex items-center justify-between lg:justify-start lg:gap-6">
@@ -254,7 +254,7 @@ export function WatchView({ initialVideo }: WatchViewProps) {
               </div>
 
               {/* Action Buttons (Pill Group) */}
-              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 lg:pb-0 scroll-smooth">
+              <div className="flex items-center gap-2 flex-wrap pb-2 lg:pb-0">
                 {/* Like/Dislike Pill */}
                 <div className="flex items-center h-10 rounded-full bg-foreground/5 hover:bg-foreground/10 transition-colors">
                   <button 

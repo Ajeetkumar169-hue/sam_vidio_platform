@@ -316,7 +316,17 @@ export function ShortsFeed() {
 function ShortPlayer({ src }: { src: string }) {
   const videoRef = useRef<HTMLVideoElement>(null)
 
+  const isStreamtape = src.includes("streamtape.com/")
+  let embedUrl = src
+  if (isStreamtape) {
+    const stMatch = src.match(/streamtape\.com\/(?:v|e)\/([a-zA-Z0-9_-]+)/)
+    if (stMatch) {
+      embedUrl = `https://streamtape.com/e/${stMatch[1]}`
+    }
+  }
+
   useEffect(() => {
+    if (isStreamtape) return // Handled by iframe
     if (!src || !videoRef.current) return
     const video = videoRef.current
     const isHLS = src.includes(".m3u8")
@@ -333,7 +343,18 @@ function ShortPlayer({ src }: { src: string }) {
     } else {
       video.src = src
     }
-  }, [src])
+  }, [src, isStreamtape])
+
+  if (isStreamtape) {
+    return (
+      <iframe
+        src={embedUrl}
+        className="h-full w-full border-none pointer-events-none"
+        allow="autoplay; fullscreen"
+        allowFullScreen
+      />
+    )
+  }
 
   return (
     <video
