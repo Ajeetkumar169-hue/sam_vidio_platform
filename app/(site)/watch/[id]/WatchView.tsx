@@ -333,6 +333,17 @@ export function WatchView({ initialVideo }: WatchViewProps) {
                   }
                 />
 
+                {/* Admin Delete Pill */}
+                {user?.role === "admin" && (
+                  <button 
+                    onClick={handleDelete}
+                    className="flex items-center gap-2 h-10 px-4 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors whitespace-nowrap"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                    <span className="text-sm font-black tracking-tight">Delete Video</span>
+                  </button>
+                )}
+
                 {/* Save Pill removed per request */}
 
                 {/* More Menu removed per request */}
