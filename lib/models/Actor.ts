@@ -21,7 +21,7 @@ const ActorSchema = new Schema<IActor>(
   { timestamps: true }
 )
 
-ActorSchema.index({ slug: 1 })
+// slug: { unique: true } handles the index automatically
 ActorSchema.index({ name: "text", bio: "text" })
 
 const Actor: Model<IActor> = mongoose.models.Actor || mongoose.model<IActor>("Actor", ActorSchema)
