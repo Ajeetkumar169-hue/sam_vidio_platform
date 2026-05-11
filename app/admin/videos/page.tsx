@@ -403,8 +403,7 @@ export default function AdminVideos() {
                             Next
                         </Button>
                     </div>
-                </div>
-            )}
-        </div>
-    )
-}
+                )}
+            </div>
+        )
+    }
