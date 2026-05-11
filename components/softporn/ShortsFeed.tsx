@@ -52,6 +52,7 @@ export function ShortsFeed() {
   const lastScrollTop = useRef(0)
   const containerRef = useRef<HTMLDivElement>(null)
   const hideTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const viewedShorts = useRef<Set<string>>(new Set())
 
   const showNavbars = useCallback(() => {
     // Dispatch event to show navbars (hideNavs = false)
@@ -75,6 +76,18 @@ export function ShortsFeed() {
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
     }
   }, [currentIndex, showNavbars])
+
+  // Increment View Count for active short
+  useEffect(() => {
+    if (shorts.length > 0 && shorts[currentIndex]) {
+      const activeShortId = shorts[currentIndex]._id
+      if (!viewedShorts.current.has(activeShortId)) {
+        viewedShorts.current.add(activeShortId)
+        fetch(`/api/videos/${activeShortId}/view`, { method: "POST" })
+          .catch(err => console.error("Short view increment failed:", err))
+      }
+    }
+  }, [currentIndex, shorts])
 
   useEffect(() => {
     fetch("/api/videos?isShort=true&limit=10")

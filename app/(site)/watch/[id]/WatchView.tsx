@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useAuth } from "@/lib/auth-context"
@@ -86,6 +86,7 @@ export function WatchView({ initialVideo }: WatchViewProps) {
   const [dislikeCount, setDislikeCount] = useState(initialVideo.dislikes || 0)
   const [isSubscribed, setIsSubscribed] = useState(false)
   const [showComments, setShowComments] = useState(false)
+  const viewCounted = useRef(false)
 
   useEffect(() => {
     async function loadRelated() {
@@ -123,6 +124,21 @@ export function WatchView({ initialVideo }: WatchViewProps) {
       }).catch(err => console.error("History recording failed:", err))
     }
   }, [user, videoId])
+
+  // Increment View Count
+  useEffect(() => {
+    if (!viewCounted.current && videoId) {
+      viewCounted.current = true
+      fetch(`/api/videos/${videoId}/view`, { method: "POST" })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                setVideo(prev => ({ ...prev, views: data.data.views }))
+            }
+        })
+        .catch(err => console.error("View increment failed:", err))
+    }
+  }, [videoId])
 
 
   const handleLike = useCallback(async () => {
