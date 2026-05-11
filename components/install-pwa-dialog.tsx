@@ -59,11 +59,10 @@ export function InstallPwaDialog() {
     setIsVisible(false)
   }
 
-  const handleDismiss = () => {
+  const handleDismiss = (durationInHours: number = 24) => {
     setIsVisible(false)
-    // Only suppress for 24 hours to give them another chance tomorrow
-    const tomorrow = Date.now() + 24 * 60 * 60 * 1000
-    localStorage.setItem("pwa-prompt-dismissed", tomorrow.toString())
+    const expiry = Date.now() + durationInHours * 60 * 60 * 1000
+    localStorage.setItem("pwa-prompt-dismissed", expiry.toString())
   }
 
   if (!mounted || !isVisible) return null
@@ -77,9 +76,9 @@ export function InstallPwaDialog() {
         <div className="absolute -top-24 -right-24 h-48 w-48 bg-primary/20 blur-[80px] rounded-full animate-pulse" />
         <div className="absolute -bottom-24 -left-24 h-48 w-48 bg-blue-500/10 blur-[80px] rounded-full" />
         
-        {/* Close Button */}
+        {/* Close Button (Cut) */}
         <button 
-          onClick={handleDismiss}
+          onClick={() => handleDismiss(48)} // Close/Cut suppresses for 48 hours
           className="absolute top-5 right-5 h-8 w-8 rounded-full bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all z-20"
         >
           <X className="h-4 w-4" />
@@ -138,14 +137,14 @@ export function InstallPwaDialog() {
               {/* Shine effect */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:animate-shimmer" />
               <Download className="h-5 w-5 mr-3 group-hover/btn:scale-110 transition-transform" />
-              Get the App
+              Install Now
             </Button>
             
             <button 
-              onClick={handleDismiss}
+              onClick={() => handleDismiss(1)} // Later suppresses for only 1 hour
               className="w-full h-10 text-white/40 hover:text-white text-xs font-black uppercase tracking-[0.2em] transition-colors"
             >
-              Not now, keep browsing
+              Maybe Later
             </button>
           </div>
         </div>
