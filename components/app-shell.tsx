@@ -74,7 +74,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <AgeVerification />
       
       {/* PWA Install Prompt - Higher Z-Index and positioned above mobile nav */}
-      <div className="fixed bottom-24 left-0 right-0 z-[10000] pointer-events-none flex justify-center">
+      <div className="fixed bottom-32 left-0 right-0 z-[10000] pointer-events-none flex justify-center">
         <div className="pointer-events-auto w-full max-w-md px-4">
            <InstallPwaDialog />
         </div>

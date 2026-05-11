@@ -32,7 +32,7 @@ export function SplashScreen({ onComplete }: { onComplete?: () => void }) {
   if (!isVisible) return null
 
   return (
-    <div className={`fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-[#0F0F19] transition-all duration-700 ease-in-out ${isEnding ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+    <div className={`fixed inset-0 z-[99999] flex flex-col items-center justify-start pt-12 md:pt-24 bg-[#0F0F19] transition-all duration-700 ease-in-out ${isEnding ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
       
       {/* Animated Background Glow */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">

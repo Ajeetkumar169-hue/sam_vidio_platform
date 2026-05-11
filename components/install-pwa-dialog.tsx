@@ -31,10 +31,10 @@ export function InstallPwaDialog() {
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt)
 
-    // 4. Force show after 1.5s for all devices
+    // 4. Force show after 0.5s for all devices
     const forceShowTimer = setTimeout(() => {
       setIsVisible(true)
-    }, 1500)
+    }, 500)
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt)
