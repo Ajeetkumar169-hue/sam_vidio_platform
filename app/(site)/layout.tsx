@@ -1,4 +1,4 @@
-import SiteLayoutClient from "./SiteLayoutClient"
+import { AppShell } from "@/components/app-shell"
 
 export default function SiteLayout({
   children,
@@ -6,8 +6,8 @@ export default function SiteLayout({
   children: React.ReactNode
 }) {
   return (
-    <SiteLayoutClient>
+    <AppShell>
       {children}
-    </SiteLayoutClient>
+    </AppShell>
   )
 }
