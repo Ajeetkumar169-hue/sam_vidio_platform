@@ -9,6 +9,7 @@ import { MobileDrawer } from "@/components/mobile-drawer"
 import { AgeVerification } from "@/components/age-verification"
 import { cn } from "@/lib/utils"
 import { SplashScreen } from "@/components/splash-screen"
+import { InstallPwaDialog } from "@/components/install-pwa-dialog"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [isSplashDone, setIsSplashDone] = useState(false)
@@ -24,9 +25,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isShorts = pathname === "/softporn"
   
   useEffect(() => {
-    if (sessionStorage.getItem("splash-shown")) {
-        setIsSplashDone(true)
-    }
     const handleHide = (e: any) => setHideNavs(e.detail)
     window.addEventListener("toggle-navs", handleHide as any)
     return () => window.removeEventListener("toggle-navs", handleHide as any)
@@ -74,6 +72,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <>
       {!isSplashDone && <SplashScreen onComplete={() => setIsSplashDone(true)} />}
       <AgeVerification />
+      
+      {/* PWA Install Prompt - Higher Z-Index and positioned above mobile nav */}
+      <div className="fixed bottom-24 left-0 right-0 z-[10000] pointer-events-none flex justify-center">
+        <div className="pointer-events-auto w-full max-w-md px-4">
+           <InstallPwaDialog />
+        </div>
+      </div>
       
       <div className={cn(
         "flex h-screen flex-col relative overflow-hidden bg-background transition-opacity duration-500",

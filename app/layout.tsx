@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter, JetBrains_Mono } from 'next/font/google'
 import { AuthProvider } from '@/lib/auth-context'
-import { InstallPwaDialog } from '@/components/install-pwa-dialog'
 import { OfflineDetector } from '@/components/offline-detector'
 import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
 import Script from 'next/script'
+import { ThemeProvider } from '@/components/theme-provider'
+import { AppShell } from '@/components/app-shell'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains-mono' })
@@ -32,9 +33,6 @@ export const viewport: Viewport = {
   userScalable: false,
 }
 
-import { ThemeProvider } from '@/components/theme-provider'
-import { cn } from '@/lib/utils'
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -53,11 +51,10 @@ export default function RootLayout({
           themes={["dark", "light", "white", "pink"]}
         >
           <AuthProvider>
-            <div className="relative flex min-h-screen flex-col overflow-x-hidden">
+            <AppShell>
               {children}
-            </div>
+            </AppShell>
             <OfflineDetector />
-            <InstallPwaDialog />
             <Toaster />
             <Script src="https://upload-widget.cloudinary.com/global/all.js" strategy="afterInteractive" />
             <Script id="register-sw" strategy="afterInteractive">
