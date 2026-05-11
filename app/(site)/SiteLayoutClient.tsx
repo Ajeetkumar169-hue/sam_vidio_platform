@@ -13,7 +13,7 @@ export default function SiteLayoutClient({ children }: { children: React.ReactNo
       <main className="flex-1 pt-16 md:pt-20">
         {children}
       </main>
-      <MobileNav />
+      <MobileNav onMoreClick={() => setSidebarOpen(!sidebarOpen)} />
     </div>
   )
 }
