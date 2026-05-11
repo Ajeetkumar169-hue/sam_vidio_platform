@@ -610,7 +610,7 @@ function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: 
     }
   }
 
-  const triggerIcon = (type: "play" | "pause") => {
+  const triggerIcon = (type: "play" | "pause" | "volume" | "mute") => {
     setShowIcon(type)
     if (iconTimeoutRef.current) clearTimeout(iconTimeoutRef.current)
     iconTimeoutRef.current = setTimeout(() => setShowIcon(null), 800)
