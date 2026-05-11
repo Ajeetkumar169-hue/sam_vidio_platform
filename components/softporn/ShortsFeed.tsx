@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button"
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { useCallback } from "react"
 
 interface Short {
   _id: string
@@ -49,6 +50,30 @@ export function ShortsFeed() {
   const [subscribedStatus, setSubscribedStatus] = useState<Record<string, boolean>>({})
   const lastScrollTop = useRef(0)
   const containerRef = useRef<HTMLDivElement>(null)
+  const hideTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  const showNavbars = useCallback(() => {
+    // Dispatch event to show navbars (hideNavs = false)
+    window.dispatchEvent(new CustomEvent("toggle-navs", { detail: false }))
+    
+    // Clear existing timer
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
+    
+    // Set new timer to hide after 3 seconds
+    hideTimerRef.current = setTimeout(() => {
+      // Only hide if we are on mobile/small screens
+      if (window.innerWidth < 1024) {
+        window.dispatchEvent(new CustomEvent("toggle-navs", { detail: true }))
+      }
+    }, 3000)
+  }, [])
+
+  useEffect(() => {
+    showNavbars()
+    return () => {
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
+    }
+  }, [currentIndex, showNavbars])
 
   useEffect(() => {
     fetch("/api/videos?isShort=true&limit=10")
@@ -72,15 +97,9 @@ export function ShortsFeed() {
     if (!containerRef.current) return
     const { scrollTop, clientHeight } = containerRef.current
     
-    // Toggle Navbars based on scroll direction (Mobile Only)
-    // We use a 10px threshold to avoid jitter
-    if (window.innerWidth < 1024) {
-      if (scrollTop > lastScrollTop.current + 10) {
-        window.dispatchEvent(new CustomEvent("toggle-navs", { detail: true }))
-      } else if (scrollTop < lastScrollTop.current - 10) {
-        window.dispatchEvent(new CustomEvent("toggle-navs", { detail: false }))
-      }
-    }
+    // Auto-show/reset timer on scroll/swipe
+    showNavbars()
+    
     lastScrollTop.current = scrollTop
 
     const index = Math.round(scrollTop / clientHeight)
@@ -229,6 +248,7 @@ export function ShortsFeed() {
     <div 
       ref={containerRef}
       onScroll={handleScroll}
+      onClick={showNavbars}
       className="h-full w-full overflow-y-scroll snap-y snap-mandatory no-scrollbar bg-background"
     >
       {shorts.map((short, index) => (
