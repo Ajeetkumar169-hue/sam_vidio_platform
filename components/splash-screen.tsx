@@ -47,26 +47,26 @@ export function SplashScreen({ onComplete }: { onComplete?: () => void }) {
 
       <div className="relative flex flex-col items-center gap-10">
         {/* Logo Animation */}
-        <div className={`h-40 w-40 rounded-[40px] overflow-hidden shadow-2xl shadow-primary/30 transition-all duration-1000 transform ${isAnimating ? 'scale-100 rotate-0' : 'scale-0 -rotate-12'}`}>
-           <img src="/icon.svg" alt="SAM Logo" className="w-full h-full object-cover" />
+        <div className={`h-40 w-40 rounded-[40px] overflow-hidden shadow-2xl shadow-red-600/20 transition-all duration-1000 transform ${isAnimating ? 'scale-100 rotate-0' : 'scale-0 -rotate-12'}`}>
+           <img src="/icon.svg" alt="SAM Logo" className="w-full h-full object-contain" />
         </div>
 
         {/* Text Animation */}
         <div className="flex flex-col items-center gap-3">
             <div className="overflow-hidden">
                 <h1 className={`text-5xl md:text-7xl font-black text-white tracking-tighter transition-all duration-1000 delay-300 transform ${isAnimating ? 'translate-y-0' : 'translate-y-full'}`}>
-                    Welcome to <span className="text-primary italic">SAM</span>
+                    Welcome to <span className="text-red-600 italic">SAM</span>
                 </h1>
             </div>
-            <p className={`text-muted-foreground font-bold tracking-[0.3em] uppercase text-[10px] md:text-xs transition-all duration-1000 delay-500 transform ${isAnimating ? 'opacity-100' : 'opacity-0'}`}>
+            <p className={`text-white/40 font-bold tracking-[0.3em] uppercase text-[10px] md:text-xs transition-all duration-1000 delay-500 transform ${isAnimating ? 'opacity-100' : 'opacity-0'}`}>
                 Premium Video Experience
             </p>
         </div>
       </div>
 
       {/* Modern Loading Line */}
-      <div className="absolute bottom-24 w-64 h-[2px] bg-white/5 rounded-full overflow-hidden">
-          <div className={`h-full bg-primary transition-all duration-[2800ms] ease-in-out ${isAnimating ? 'w-full' : 'w-0'}`} />
+      <div className="absolute bottom-24 w-64 h-[2px] bg-white/5 rounded-full overflow-hidden border border-white/5">
+          <div className={`h-full bg-red-600 transition-all duration-[2800ms] ease-in-out ${isAnimating ? 'w-full' : 'w-0'}`} />
       </div>
     </div>
   )

@@ -1,7 +1,14 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="512" height="512" rx="120" fill="#FF0000"/>
-  <path d="M120 200C120 180 140 170 160 170H220V220H160C155 220 150 225 150 230V260C150 265 155 270 160 270H220V320H160C140 320 120 310 120 290V200Z" fill="white"/>
-  <path d="M260 320L310 170H360L410 320H370L360 290H310L300 320H260ZM315 260H355L335 200L315 260Z" fill="white"/>
-  <path d="M440 320V170H480L500 240L520 170H560V320H530V220L510 290H490L470 220V320H440Z" fill="white" transform="translate(-30, 0)"/>
-  <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-family="'Inter', sans-serif" font-weight="900" font-size="160" fill="white" style="letter-spacing: -5px;">SAM</text>
+  <text 
+    x="50%" 
+    y="52%" 
+    dominant-baseline="middle" 
+    text-anchor="middle" 
+    font-family="system-ui, -apple-system, sans-serif" 
+    font-weight="900" 
+    font-size="180" 
+    fill="white" 
+    style="letter-spacing: -2px;"
+  >SAM</text>
 </svg>
