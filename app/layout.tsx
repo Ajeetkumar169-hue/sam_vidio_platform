@@ -14,12 +14,10 @@ export const metadata: Metadata = {
   description: 'A modern video sharing platform with channels, categories, and trending content',
   icons: {
     icon: [
-      { url: '/icon-light-32x32.png', sizes: '32x32', type: 'image/png', media: '(prefers-color-scheme: light)' },
-      { url: '/icon-dark-32x32.png', sizes: '32x32', type: 'image/png', media: '(prefers-color-scheme: dark)' },
       { url: '/icon.svg', type: 'image/svg+xml' },
     ],
     apple: [
-      { url: '/apple-icon.png' },
+      { url: '/icon.svg', type: 'image/svg+xml' },
     ],
   },
   manifest: '/manifest.json',

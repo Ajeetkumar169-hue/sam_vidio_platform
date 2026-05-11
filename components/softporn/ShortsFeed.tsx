@@ -586,12 +586,6 @@ function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: 
     const video = videoRef.current
     if (!video) return
 
-    // Unmute on first interaction
-    if (isMuted) {
-        video.muted = false
-        setIsMuted(false)
-    }
-
     if (video.paused) {
       video.play().then(() => {
         setIsPaused(false)
@@ -639,17 +633,27 @@ function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: 
                 <Button variant="secondary" size="sm" onClick={() => window.location.reload()}>Retry</Button>
             </div>
         ) : (
-            <video
-              ref={videoRef}
-              className="h-full w-full object-contain"
-              poster={poster}
-              loop
-              playsInline
-              autoPlay={isActive}
-              muted={isMuted}
-              preload="auto"
-              onError={() => setHasError(true)}
-            />
+            <>
+                <video
+                  ref={videoRef}
+                  className="h-full w-full object-contain"
+                  poster={poster}
+                  loop
+                  playsInline
+                  autoPlay={isActive}
+                  muted={true}
+                  preload="auto"
+                  onError={() => setHasError(true)}
+                />
+                {/* Click Overlay */}
+                <div 
+                    className="absolute inset-0 z-10" 
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        handleInteraction()
+                    }} 
+                />
+            </>
         )}
         
         {showIcon && (

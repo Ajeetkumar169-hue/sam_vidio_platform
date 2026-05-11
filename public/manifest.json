@@ -4,8 +4,8 @@
   "description": "A modern video sharing platform with channels, categories, and trending content",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f0f19",
-  "theme_color": "#0f0f19",
+  "background_color": "#0F0F19",
+  "theme_color": "#0F0F19",
   "orientation": "portrait",
   "scope": "/",
   "icons": [
@@ -23,7 +23,7 @@
     },
     {
       "src": "/icon.svg",
-      "sizes": "192x192",
+      "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "maskable"
     }
