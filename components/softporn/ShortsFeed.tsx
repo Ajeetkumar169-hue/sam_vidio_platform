@@ -262,8 +262,12 @@ export function ShortsFeed() {
           key={short._id} 
           className="h-full w-full snap-start snap-always relative flex items-center justify-center"
         >
-          <div className="h-full aspect-[9/16] relative bg-background shadow-2xl">
-            <ShortPlayer src={short.videoUrl} isActive={index === currentIndex} />
+          <div className="h-full w-full relative bg-background overflow-hidden">
+            <ShortPlayer 
+                src={short.videoUrl} 
+                isActive={index === currentIndex} 
+                isNext={index === currentIndex + 1}
+            />
 
             {/* UI Overlay */}
             <div className="absolute inset-0 flex flex-col justify-end p-4 bg-gradient-to-t from-black/60 via-transparent to-transparent">
@@ -418,9 +422,12 @@ export function ShortsFeed() {
   )
 }
 
-function ShortPlayer({ src, isActive }: { src: string, isActive: boolean }) {
+function ShortPlayer({ src, isActive, isNext }: { src: string, isActive: boolean, isNext?: boolean }) {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const [isMuted, setIsMuted] = useState(false) // User requested unmuted by default
+  const [isMuted, setIsMuted] = useState(false) 
+  const [isPaused, setIsPaused] = useState(false)
+  const [showIcon, setShowIcon] = useState<"play" | "pause" | null>(null)
+  const iconTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const isStreamtape = src.includes("streamtape.com/")
   let embedUrl = src
@@ -434,6 +441,10 @@ function ShortPlayer({ src, isActive }: { src: string, isActive: boolean }) {
   useEffect(() => {
     if (isStreamtape) return // Handled by iframe
     if (!src || !videoRef.current) return
+    
+    // Only load if active or next (preloading)
+    if (!isActive && !isNext) return
+
     const video = videoRef.current
     const isHLS = src.includes(".m3u8")
 
@@ -449,7 +460,7 @@ function ShortPlayer({ src, isActive }: { src: string, isActive: boolean }) {
     } else {
       video.src = src
     }
-  }, [src, isStreamtape])
+  }, [src, isStreamtape, isActive, isNext])
 
   // Handle Play/Pause based on Active State
   useEffect(() => {
@@ -474,13 +485,34 @@ function ShortPlayer({ src, isActive }: { src: string, isActive: boolean }) {
     }
   }, [isActive, isStreamtape, isMuted])
 
-  // Toggle mute on tap
-  const toggleMute = () => {
-    setIsMuted(prev => !prev)
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted
+  // Toggle Play/Pause on tap
+  const togglePlay = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const video = videoRef.current
+    if (!video) return
+
+    if (video.paused) {
+      video.play()
+      setIsPaused(false)
+      triggerIcon("play")
+    } else {
+      video.pause()
+      setIsPaused(true)
+      triggerIcon("pause")
     }
   }
+
+  const triggerIcon = (type: "play" | "pause") => {
+    setShowIcon(type)
+    if (iconTimeoutRef.current) clearTimeout(iconTimeoutRef.current)
+    iconTimeoutRef.current = setTimeout(() => setShowIcon(null), 800)
+  }
+
+  useEffect(() => {
+    return () => {
+        if (iconTimeoutRef.current) clearTimeout(iconTimeoutRef.current)
+    }
+  }, [])
 
   if (isStreamtape) {
     return (
@@ -494,7 +526,7 @@ function ShortPlayer({ src, isActive }: { src: string, isActive: boolean }) {
   }
 
   return (
-    <div className="relative h-full w-full group cursor-pointer" onClick={toggleMute}>
+    <div className="relative h-full w-full group cursor-pointer" onClick={togglePlay}>
         <video
           ref={videoRef}
           className="h-full w-full object-cover"
@@ -502,10 +534,26 @@ function ShortPlayer({ src, isActive }: { src: string, isActive: boolean }) {
           playsInline
           autoPlay={isActive}
           muted={isMuted}
+          preload="auto"
         />
+        
+        {/* Pause/Play Visual Indicator */}
+        {showIcon && (
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/40 p-6 rounded-full animate-out fade-out zoom-out duration-1000 pointer-events-none">
+                {showIcon === "play" ? (
+                    <Zap className="h-10 w-10 text-white fill-current" />
+                ) : (
+                    <div className="h-10 w-10 flex gap-2">
+                        <div className="h-full w-3 bg-white rounded-sm" />
+                        <div className="h-full w-3 bg-white rounded-sm" />
+                    </div>
+                )}
+            </div>
+        )}
+
         {isMuted && (
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/50 p-4 rounded-full pointer-events-none animate-pulse">
-                <p className="text-white font-bold text-xs">Tap to Unmute</p>
+            <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-black/50 px-4 py-2 rounded-full pointer-events-none">
+                <p className="text-white font-bold text-[10px] uppercase tracking-widest">Muted</p>
             </div>
         )}
     </div>
