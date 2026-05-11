@@ -13,50 +13,48 @@ export function InstallPwaDialog() {
 
   useEffect(() => {
     setMounted(true)
-    // Check if already dismissed
-    const isDismissed = localStorage.getItem("pwa-prompt-dismissed")
-    if (isDismissed) return
+    
+    // 1. Check if already installed (standalone mode)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone
+    if (isStandalone) return
 
+    // 2. Check if suppressed
+    const dismissedUntil = localStorage.getItem("pwa-prompt-dismissed")
+    if (dismissedUntil && Date.now() < parseInt(dismissedUntil)) return
+
+    // 3. Listen for the native install prompt
     const handleBeforeInstallPrompt = (e: any) => {
-      // Prevent Chrome 67 and earlier from automatically showing the prompt
       e.preventDefault()
-      // Stash the event so it can be triggered later.
       setDeferredPrompt(e)
-      // Show our custom UI immediately for a strong first impression
-      const timer = setTimeout(() => setIsVisible(true), 0) 
-      return () => clearTimeout(timer)
+      setIsVisible(true) // Show immediately when the event fires
     }
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt)
 
-    // Fallback: If the browser doesn't support the prompt (iOS Safari etc), 
-    // we still show it after a delay to explain how to add to home screen
-    const fallbackTimer = setTimeout(() => {
-        if (!isVisible && !localStorage.getItem("pwa-prompt-dismissed")) {
-            setIsVisible(true)
-        }
-    }, 5000)
+    // 4. Fallback: Show the popup ANYWAY after a tiny delay if not already shown
+    // This handles iOS and other browsers that don't fire beforeinstallprompt
+    const forceShowTimer = setTimeout(() => {
+      setIsVisible(true)
+    }, 1000)
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt)
-      clearTimeout(fallbackTimer)
+      clearTimeout(forceShowTimer)
     }
-  }, [isVisible])
+  }, [])
 
   const handleInstall = async () => {
     if (deferredPrompt) {
-        // Show the install prompt
         deferredPrompt.prompt()
-        // Wait for the user to respond to the prompt
         const { outcome } = await deferredPrompt.userChoice
         console.log(`User response to the install prompt: ${outcome}`)
-        // We've used the prompt, and can't use it again, throw it away
         setDeferredPrompt(null)
+        setIsVisible(false)
     } else {
-        // Fallback for iOS/Other: Show instructions or just toast
-        alert("To install: Tap the share button and select 'Add to Home Screen'")
+        // iOS / Manual Install Guide
+        alert("To Install: \n1. Tap 'Share' button \n2. Select 'Add to Home Screen' \n\nThen enjoy SAM Platform as a full App!")
+        setIsVisible(false)
     }
-    setIsVisible(false)
   }
 
   const handleDismiss = (durationInMinutes: number = 1440) => {
@@ -70,7 +68,7 @@ export function InstallPwaDialog() {
   return (
     <div className="fixed bottom-6 left-4 right-4 z-[9999] md:left-auto md:right-8 md:bottom-8 md:max-w-md">
       {/* Premium Animated Container */}
-      <div className="relative overflow-hidden rounded-[2.5rem] bg-black/60 backdrop-blur-3xl border border-white/10 p-6 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)] animate-in fade-in zoom-in-95 slide-in-from-bottom-10 duration-1000 ease-out group">
+      <div className="relative overflow-hidden rounded-[2.5rem] bg-black/80 backdrop-blur-3xl border border-white/10 p-6 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)] animate-in fade-in zoom-in-95 slide-in-from-bottom-10 duration-700 ease-out">
         
         {/* Animated Accent Glow */}
         <div className="absolute -top-24 -right-24 h-48 w-48 bg-primary/20 blur-[80px] rounded-full animate-pulse" />
@@ -78,19 +76,18 @@ export function InstallPwaDialog() {
         
         {/* Close Button (Cut) */}
         <button 
-          onClick={() => handleDismiss(2880)} // Close/Cut suppresses for 48 hours (2880 minutes)
+          onClick={() => handleDismiss(2880)} 
           className="absolute top-5 right-5 h-8 w-8 rounded-full bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all z-20"
         >
           <X className="h-4 w-4" />
         </button>
 
         <div className="relative z-10 flex flex-col gap-6">
-          {/* Header with Logo & Brand */}
           <div className="flex items-center gap-5">
-            <div className="relative h-20 w-20 shrink-0">
+            <div className="relative h-16 w-16 shrink-0">
                <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full animate-pulse" />
-               <div className="relative h-full w-full rounded-3xl bg-gradient-to-br from-primary to-primary-foreground p-[1px] overflow-hidden shadow-2xl">
-                 <div className="h-full w-full rounded-3xl bg-black flex items-center justify-center p-2">
+               <div className="relative h-full w-full rounded-2xl bg-gradient-to-br from-primary to-primary-foreground p-[1px] overflow-hidden shadow-2xl">
+                 <div className="h-full w-full rounded-2xl bg-black flex items-center justify-center p-2">
                    <Image 
                      src="/logo.png" 
                      alt="SAM Logo" 
@@ -100,49 +97,43 @@ export function InstallPwaDialog() {
                    />
                  </div>
                </div>
-               <div className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-primary flex items-center justify-center border-2 border-black shadow-lg">
-                  <Smartphone className="h-3.5 w-3.5 text-white" />
-               </div>
             </div>
             
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <h3 className="font-black text-2xl tracking-tighter text-white uppercase">Install App</h3>
+                <h3 className="font-black text-xl tracking-tighter text-white uppercase">Install SAM App</h3>
                 <Sparkles className="h-4 w-4 text-primary animate-bounce" />
               </div>
-              <p className="text-sm text-white/60 font-medium leading-relaxed">
-                Add <span className="text-primary font-bold">SAM Platform</span> to your home screen for a premium, lightning-fast experience.
+              <p className="text-xs text-white/60 font-medium leading-relaxed">
+                Add to home screen for a premium experience.
               </p>
             </div>
           </div>
 
-          {/* Feature List */}
-          <div className="grid grid-cols-2 gap-3">
-             <div className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/5 border border-white/5">
-                <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                <span className="text-[11px] font-bold text-white/80 uppercase tracking-wider">Fast Load</span>
+          <div className="grid grid-cols-2 gap-2">
+             <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5">
+                <CheckCircle2 className="h-3 w-3 text-primary shrink-0" />
+                <span className="text-[10px] font-bold text-white/80 uppercase tracking-wider">Fast Load</span>
              </div>
-             <div className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/5 border border-white/5">
-                <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                <span className="text-[11px] font-bold text-white/80 uppercase tracking-wider">Offline View</span>
+             <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5">
+                <CheckCircle2 className="h-3 w-3 text-primary shrink-0" />
+                <span className="text-[10px] font-bold text-white/80 uppercase tracking-wider">Offline</span>
              </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             <Button 
               onClick={handleInstall}
-              className="relative w-full rounded-2xl bg-primary hover:bg-primary/90 text-white font-black h-14 text-lg shadow-xl shadow-primary/20 overflow-hidden group/btn active-bounce"
+              className="relative w-full rounded-xl bg-primary hover:bg-primary/90 text-white font-black h-12 text-base shadow-xl shadow-primary/20 overflow-hidden group/btn active-bounce"
             >
-              {/* Shine effect */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:animate-shimmer" />
-              <Download className="h-5 w-5 mr-3 group-hover/btn:scale-110 transition-transform" />
+              <Download className="h-4 w-4 mr-2" />
               Install Now
             </Button>
             
             <button 
-              onClick={() => handleDismiss(2)} // Maybe Later suppresses for only 2 minutes
-              className="w-full h-10 text-white/40 hover:text-white text-xs font-black uppercase tracking-[0.2em] transition-colors"
+              onClick={() => handleDismiss(2)} 
+              className="w-full h-8 text-white/40 hover:text-white text-[10px] font-black uppercase tracking-[0.2em] transition-colors"
             >
               Maybe Later
             </button>
