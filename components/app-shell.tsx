@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useCallback, useEffect } from "react"
+import { usePathname } from "next/navigation"
 import { Header } from "@/components/header"
 import { AppSidebar } from "@/components/app-sidebar"
 import { MobileNav } from "@/components/mobile-nav"
@@ -16,6 +17,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // Mobile Drawer State
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [hideNavs, setHideNavs] = useState(false)
+  const pathname = usePathname()
+  const isShorts = pathname === "/softporn"
   
   useEffect(() => {
     const handleHide = (e: any) => setHideNavs(e.detail)
@@ -85,7 +88,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <div className={cn(
           "transition-all duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] fixed top-0 left-0 right-0 z-[50]",
-          hideNavs ? "-translate-y-full opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
+          (hideNavs || isShorts) ? "-translate-y-full opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
         )}>
           <Header onMenuClick={() => setSidebarOpen(true)} />
         </div>
@@ -106,7 +109,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <main className={cn(
             "flex-1 overflow-y-auto platinum-scrollbar transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
             sidebarPinned ? "lg:pl-64" : "",
-            hideNavs ? "pt-0" : "pt-16"
+            (hideNavs || isShorts) ? "pt-0" : "pt-16"
           )}>
             {children}
             

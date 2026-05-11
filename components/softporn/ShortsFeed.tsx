@@ -48,6 +48,7 @@ export function ShortsFeed() {
   const [commentOpen, setCommentOpen] = useState(false)
   const [commentShortId, setCommentShortId] = useState<string | null>(null)
   const [subscribedStatus, setSubscribedStatus] = useState<Record<string, boolean>>({})
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const lastScrollTop = useRef(0)
   const containerRef = useRef<HTMLDivElement>(null)
   const hideTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -97,14 +98,19 @@ export function ShortsFeed() {
     if (!containerRef.current) return
     const { scrollTop, clientHeight } = containerRef.current
     
-    // Auto-show/reset timer on scroll/swipe
-    showNavbars()
+    // Upar scroll (next video) -> hide, Neeche scroll (prev video) -> show
+    if (scrollTop > lastScrollTop.current + 10) {
+        window.dispatchEvent(new CustomEvent("toggle-navs", { detail: true }))
+    } else if (scrollTop < lastScrollTop.current - 10) {
+        window.dispatchEvent(new CustomEvent("toggle-navs", { detail: false }))
+    }
     
     lastScrollTop.current = scrollTop
 
     const index = Math.round(scrollTop / clientHeight)
     if (index !== currentIndex) {
       setCurrentIndex(index)
+      setExpandedId(null) // Reset description on swipe
     }
   }
 
@@ -286,8 +292,28 @@ export function ShortsFeed() {
                       </Button>
                    </div>
                    
-                   <div className="space-y-2 flex flex-col items-start">
-                      <h3 className="font-medium text-white text-base leading-snug line-clamp-2 max-w-[80%] mb-2">{short.title}</h3>
+                   <div className="space-y-2 flex flex-col items-start w-full">
+                      <div className="flex items-center gap-2 max-w-full">
+                          <h3 className="font-medium text-white text-base leading-snug truncate mb-1">
+                              {short.title}
+                          </h3>
+                          {short.description && (
+                              <button 
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    setExpandedId(expandedId === short._id ? null : short._id)
+                                }}
+                                className="text-[10px] font-bold text-white/70 hover:text-white uppercase tracking-widest bg-white/10 px-2 py-0.5 rounded shrink-0"
+                              >
+                                  {expandedId === short._id ? "Less" : "More"}
+                              </button>
+                          )}
+                      </div>
+                      {expandedId === short._id && short.description && (
+                          <div className="text-xs text-white/90 bg-black/60 p-3 rounded-2xl backdrop-blur-md mb-2 max-h-32 overflow-y-auto w-[90%] border border-white/10 shadow-2xl">
+                              {short.description}
+                          </div>
+                      )}
                    </div>
                 </div>
 
