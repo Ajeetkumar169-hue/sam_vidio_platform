@@ -331,6 +331,7 @@ export function ShortsFeed() {
             </div>
             <ShortPlayer 
                 src={short.videoUrl} 
+                poster={short.videoUrl.replace(/\.[^/.]+$/, ".jpg")}
                 isActive={index === currentIndex} 
                 isNext={index === currentIndex + 1 || index === currentIndex + 2}
             />
@@ -501,12 +502,13 @@ export function ShortsFeed() {
   )
 }
 
-function ShortPlayer({ src, isActive, isNext }: { src: string, isActive: boolean, isNext?: boolean }) {
+function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: string, isActive: boolean, isNext?: boolean }) {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const [isMuted, setIsMuted] = useState(false) 
+  const [isMuted, setIsMuted] = useState(true) // Start muted for better autoplay success
   const [isPaused, setIsPaused] = useState(false)
-  const [showIcon, setShowIcon] = useState<"play" | "pause" | null>(null)
+  const [showIcon, setShowIcon] = useState<"play" | "pause" | "volume" | "mute" | null>(null)
   const iconTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [hasError, setHasError] = useState(false)
 
   const isStreamtape = src.includes("streamtape.com/")
   let embedUrl = src
@@ -529,9 +531,34 @@ function ShortPlayer({ src, isActive, isNext }: { src: string, isActive: boolean
 
     if (isHLS) {
       if (Hls.isSupported()) {
-        const hls = new Hls()
+        const hls = new Hls({
+            enableWorker: true,
+            lowLatencyMode: true,
+            backBufferLength: 90,
+            maxBufferLength: 30,
+            maxMaxBufferLength: 600,
+            appendErrorMaxRetry: 5,
+        })
         hls.loadSource(src)
         hls.attachMedia(video)
+        
+        hls.on(Hls.Events.ERROR, (event, data) => {
+            if (data.fatal) {
+                switch (data.type) {
+                    case Hls.ErrorTypes.NETWORK_ERROR:
+                        hls.startLoad()
+                        break
+                    case Hls.ErrorTypes.MEDIA_ERROR:
+                        hls.recoverMediaError()
+                        break
+                    default:
+                        hls.destroy()
+                        setHasError(true)
+                        break
+                }
+            }
+        })
+
         return () => hls.destroy()
       } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
         video.src = src
@@ -548,13 +575,13 @@ function ShortPlayer({ src, isActive, isNext }: { src: string, isActive: boolean
     if (!video) return
 
     if (isActive) {
-      video.muted = isMuted // ensure video element matches state before playing
-      setIsPaused(false) // Reset pause state when becoming active
+      video.muted = isMuted
+      setIsPaused(false)
+      setHasError(false)
       const playPromise = video.play()
       if (playPromise !== undefined) {
         playPromise.catch(() => {
-          // If browser still blocks, force mute
-          setIsMuted(true)
+          // Keep muted if blocked
           video.muted = true
           video.play().catch(() => {})
         })
@@ -597,44 +624,83 @@ function ShortPlayer({ src, isActive, isNext }: { src: string, isActive: boolean
 
   if (isStreamtape) {
     return (
-      <iframe
-        src={embedUrl}
-        className="h-full w-full border-none pointer-events-none"
-        allow="autoplay; fullscreen"
-        allowFullScreen
-      />
+      <div className="h-full w-full relative">
+        <iframe
+            src={embedUrl}
+            className="h-full w-full border-none"
+            allow="autoplay; fullscreen"
+            allowFullScreen
+        />
+        {/* Overlay to catch clicks and prevent Streamtape popups if possible, but allow interaction */}
+        <div className="absolute inset-0 z-10 bg-transparent" />
+      </div>
     )
   }
 
+  const toggleMute = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const video = videoRef.current
+    if (!video) return
+    const newMuted = !isMuted
+    video.muted = newMuted
+    setIsMuted(newMuted)
+    triggerIcon(newMuted ? "mute" : "volume")
+  }
+
   return (
-    <div className="relative h-full w-full group cursor-pointer" onClick={togglePlay}>
-        <video
-          ref={videoRef}
-          className="h-full w-full object-cover"
-          loop
-          playsInline
-          autoPlay={isActive}
-          muted={isMuted}
-          preload="auto"
-        />
+    <div className="relative h-full w-full group cursor-pointer bg-black" onClick={togglePlay}>
+        {hasError ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center">
+                <Zap className="h-10 w-10 text-destructive animate-pulse" />
+                <p className="text-white font-bold text-sm">Failed to load video</p>
+                <Button variant="secondary" size="sm" onClick={() => window.location.reload()}>Retry</Button>
+            </div>
+        ) : (
+            <video
+              ref={videoRef}
+              className="h-full w-full object-contain"
+              poster={poster}
+              loop
+              playsInline
+              autoPlay={isActive}
+              muted={isMuted}
+              preload="auto"
+              onError={() => setHasError(true)}
+            />
+        )}
         
+        {/* Mute/Unmute Overlay Button */}
+        <button 
+          onClick={toggleMute}
+          className="absolute top-6 right-6 z-50 h-10 w-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/60 transition-all border border-white/10"
+        >
+            {isMuted ? <Zap className="h-5 w-5 fill-current opacity-50" /> : <Zap className="h-5 w-5 fill-current" />}
+        </button>
+
         {/* Pause/Play Visual Indicator */}
         {showIcon && (
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/40 p-6 rounded-full animate-out fade-out zoom-out duration-1000 pointer-events-none">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/40 p-6 rounded-full animate-out fade-out zoom-out duration-1000 pointer-events-none z-50">
                 {showIcon === "play" ? (
                     <Zap className="h-10 w-10 text-white fill-current" />
-                ) : (
+                ) : showIcon === "pause" ? (
                     <div className="h-10 w-10 flex gap-2">
                         <div className="h-full w-3 bg-white rounded-sm" />
                         <div className="h-full w-3 bg-white rounded-sm" />
                     </div>
+                ) : showIcon === "volume" ? (
+                    <Zap className="h-10 w-10 text-white fill-current" />
+                ) : (
+                    <Zap className="h-10 w-10 text-white opacity-40" />
                 )}
             </div>
         )}
 
-        {isMuted && (
-            <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-black/50 px-4 py-2 rounded-full pointer-events-none">
-                <p className="text-white font-bold text-[10px] uppercase tracking-widest">Muted</p>
+        {isMuted && isActive && !hasError && (
+            <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-black/50 px-4 py-2 rounded-full pointer-events-none z-50 border border-white/10">
+                <p className="text-white font-bold text-[10px] uppercase tracking-widest flex items-center gap-2">
+                    <Zap className="h-3 w-3 fill-current" />
+                    Tap to Unmute
+                </p>
             </div>
         )}
     </div>
