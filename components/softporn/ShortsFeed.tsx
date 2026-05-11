@@ -470,6 +470,7 @@ function ShortPlayer({ src, isActive, isNext }: { src: string, isActive: boolean
 
     if (isActive) {
       video.muted = isMuted // ensure video element matches state before playing
+      setIsPaused(false) // Reset pause state when becoming active
       const playPromise = video.play()
       if (playPromise !== undefined) {
         playPromise.catch(() => {
@@ -482,12 +483,13 @@ function ShortPlayer({ src, isActive, isNext }: { src: string, isActive: boolean
     } else {
       video.pause()
       video.currentTime = 0
+      setIsPaused(false)
     }
   }, [isActive, isStreamtape, isMuted])
 
   // Toggle Play/Pause on tap
   const togglePlay = (e: React.MouseEvent) => {
-    e.stopPropagation()
+    // e.stopPropagation() // Allow bubbling so navbars also toggle
     const video = videoRef.current
     if (!video) return
 
