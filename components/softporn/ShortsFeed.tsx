@@ -21,6 +21,7 @@ import { CommentsSection } from "@/components/comments-section"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 
 interface Short {
   _id: string
@@ -45,6 +46,7 @@ export function ShortsFeed() {
   const [likedStatus, setLikedStatus] = useState<Record<string, { liked: boolean, disliked: boolean, likes: number }>>({})
   const [commentOpen, setCommentOpen] = useState(false)
   const [commentShortId, setCommentShortId] = useState<string | null>(null)
+  const [subscribedStatus, setSubscribedStatus] = useState<Record<string, boolean>>({})
   const lastScrollTop = useRef(0)
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -179,6 +181,30 @@ export function ShortsFeed() {
     }
   }
 
+  const handleSubscribe = async (channelSlug: string) => {
+    if (!user) {
+      router.push("/login")
+      return
+    }
+
+    const isCurrentlySubscribed = subscribedStatus[channelSlug]
+    
+    // Optimistic Update
+    setSubscribedStatus(prev => ({ ...prev, [channelSlug]: !isCurrentlySubscribed }))
+
+    try {
+      const res = await fetch(`/api/channels/${channelSlug}/subscribe`, { method: "POST" })
+      const data = await res.json()
+      if (data.success) {
+        setSubscribedStatus(prev => ({ ...prev, [channelSlug]: data.subscribed }))
+        toast.success(data.subscribed ? "Subscribed!" : "Unsubscribed")
+      }
+    } catch {
+      toast.error("Action failed")
+      setSubscribedStatus(prev => ({ ...prev, [channelSlug]: isCurrentlySubscribed }))
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
@@ -216,26 +242,37 @@ export function ShortsFeed() {
             {/* UI Overlay */}
             <div className="absolute inset-0 flex flex-col justify-end p-4 bg-gradient-to-t from-black/60 via-transparent to-transparent">
               
-              <div className="flex flex-row-reverse justify-between items-end gap-4">
-                {/* Info & Right Actions */}
-                <div className="flex-1 pb-4 text-right flex flex-col items-end gap-4">
-                   <div className="flex items-center justify-end gap-2 mb-1">
-                      <Button size="sm" className="h-8 rounded-full bg-white text-black hover:bg-white/90 font-bold px-4 mr-2">Subscribe</Button>
-                      <p className="font-bold text-white text-sm">@{short.channel.slug}</p>
-                      <div className="h-9 w-9 rounded-full bg-primary overflow-hidden border border-white/20">
-                        {short.channel.logo ? <img src={short.channel.logo} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full flex items-center justify-center font-bold text-sm bg-secondary">{short.channel.name[0]}</div>}
-                      </div>
+              <div className="flex flex-row justify-between items-end gap-4">
+                {/* Info & Actions */}
+                <div className="flex-1 pb-4 text-left flex flex-col items-start gap-4">
+                   <div className="flex items-center justify-start gap-2 mb-1">
+                      <Link href={`/channel/${short.channel.slug}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                        <div className="h-9 w-9 rounded-full bg-primary overflow-hidden border border-white/20">
+                            {short.channel.logo ? <img src={short.channel.logo} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full flex items-center justify-center font-bold text-sm bg-secondary">{short.channel.name[0]}</div>}
+                        </div>
+                        <p className="font-bold text-white text-sm">@{short.channel.slug}</p>
+                      </Link>
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleSubscribe(short.channel.slug)}
+                        className={cn(
+                            "h-8 rounded-full font-bold px-4 ml-2 transition-all",
+                            subscribedStatus[short.channel.slug] 
+                                ? "bg-secondary text-foreground hover:bg-secondary/80" 
+                                : "bg-white text-black hover:bg-white/90"
+                        )}
+                      >
+                        {subscribedStatus[short.channel.slug] ? "Subscribed" : "Subscribe"}
+                      </Button>
                    </div>
                    
-                   <div className="space-y-2 flex flex-col items-end">
+                   <div className="space-y-2 flex flex-col items-start">
                       <h3 className="font-medium text-white text-base leading-snug line-clamp-2 max-w-[80%] mb-2">{short.title}</h3>
                    </div>
-
-
                 </div>
 
-                {/* Left Actions Sidebar */}
-                <div className="flex flex-col gap-5 items-center mb-4 pl-3">
+                {/* Right Actions Sidebar */}
+                <div className="flex flex-col gap-5 items-center mb-4 pr-3">
                     {/* Like */}
                     <div className="flex flex-col items-center gap-1">
                         <button 
@@ -304,11 +341,6 @@ export function ShortsFeed() {
                         />
                         <span className="text-[10px] font-bold text-white uppercase tracking-tighter">Share</span>
                     </div>
-
-                    {/* Channel Profile Icon */}
-                    <div className="mt-2 h-10 w-10 rounded-lg border-2 border-white/20 overflow-hidden shadow-lg">
-                        {short.channel.logo ? <img src={short.channel.logo} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full bg-primary flex items-center justify-center text-xs font-black">SAM</div>}
-                    </div>
                 </div>
               </div>
 
@@ -342,7 +374,7 @@ export function ShortsFeed() {
 
 function ShortPlayer({ src, isActive }: { src: string, isActive: boolean }) {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const [isMuted, setIsMuted] = useState(true) // Start muted for guaranteed auto-play
+  const [isMuted, setIsMuted] = useState(false) // User requested unmuted by default
 
   const isStreamtape = src.includes("streamtape.com/")
   let embedUrl = src
