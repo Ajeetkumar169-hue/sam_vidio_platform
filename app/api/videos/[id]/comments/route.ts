@@ -1,66 +1,79 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getStore, seedStore, findUserById, uuid } from "@/lib/store"
+import connectDB from "@/lib/db"
+import Comment from "@/lib/models/Comment"
+import User from "@/lib/models/User"
+import Channel from "@/lib/models/Channel"
 import { getCurrentUser } from "@/lib/auth"
+import { ApiResponse } from "@/lib/api-response"
+
+export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    seedStore()
-    const { id } = await params
-    const s = getStore()
+    await connectDB()
+    const { id: videoId } = await params
     const { searchParams } = new URL(req.url)
     const parentId = searchParams.get("parent") || null
 
-    const comments = s.comments
-      .filter((c) => c.videoId === id && c.parentComment === parentId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .map((c) => {
-        const user = findUserById(c.userId)
-        return {
-          ...c,
-          _id: c.id,
-          user: user ? { _id: user.id, username: user.username, avatar: user.avatar } : null,
-        }
-      })
+    const comments = await Comment.find({ video: videoId, parentComment: parentId })
+      .sort({ createdAt: -1 })
+      .populate("user", "username avatar")
+      .lean()
 
-    return NextResponse.json({ comments })
-  } catch (error: unknown) {
+    // Attach channel slugs for profile links
+    const commentsWithSlugs = await Promise.all(comments.map(async (c: any) => {
+        if (!c.user) return c;
+        const channel = await Channel.findOne({ owner: c.user._id }).select("slug").lean()
+        return {
+            ...c,
+            user: {
+                ...c.user,
+                channelSlug: channel?.slug || null
+            }
+        }
+    }))
+
+    return NextResponse.json({ comments: commentsWithSlugs })
+  } catch (error: any) {
     console.error("Comments fetch error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return ApiResponse.error(error.message)
   }
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    seedStore()
-    const { id } = await params
+    await connectDB()
+    const { id: videoId } = await params
     const user = await getCurrentUser()
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (!user) return ApiResponse.unauthorized()
 
-    const s = getStore()
     const { text, parentComment } = await req.json()
-    if (!text || !text.trim()) return NextResponse.json({ error: "Text required" }, { status: 400 })
+    if (!text || !text.trim()) return ApiResponse.badRequest("Text required")
 
-    const comment = {
-      id: uuid(),
-      videoId: id,
-      userId: user.userId,
+    const comment = await Comment.create({
+      video: videoId,
+      user: user.userId,
       text: text.trim(),
       parentComment: parentComment || null,
-      likes: 0,
-      createdAt: new Date().toISOString(),
-    }
-    s.comments.push(comment)
+    })
 
-    const u = findUserById(user.userId)
-    return NextResponse.json({
-      comment: {
-        ...comment,
-        _id: comment.id,
-        user: u ? { _id: u.id, username: u.username, avatar: u.avatar } : null,
-      },
-    }, { status: 201 })
-  } catch (error: unknown) {
+    const populated = await Comment.findById(comment._id)
+      .populate("user", "username avatar")
+      .lean()
+
+    const channel = await Channel.findOne({ owner: user.userId }).select("slug").lean()
+    
+    const finalComment = {
+        ...populated,
+        user: {
+            ...populated?.user,
+            channelSlug: channel?.slug || null
+        }
+    }
+
+    return NextResponse.json({ comment: finalComment }, { status: 201 })
+  } catch (error: any) {
     console.error("Comment create error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return ApiResponse.error(error.message)
   }
 }

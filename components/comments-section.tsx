@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import Link from "next/link"
 import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -18,6 +19,7 @@ interface Comment {
     id?: string
     username: string
     avatar?: string
+    channelSlug?: string | null
   }
   parentComment: string | null
 }
@@ -150,14 +152,25 @@ export function CommentsSection({ videoId }: { videoId: string }) {
             const commentId = comment._id || comment.id || ""
             return (
             <div key={commentId} className="flex gap-3">
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-bold text-foreground">
-                {comment.user?.username?.charAt(0).toUpperCase() || "?"}
-              </div>
+              <Link href={comment.user?.channelSlug ? `/channel/${comment.user.channelSlug}` : "#"} className="flex-shrink-0">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary overflow-hidden border border-white/10 hover:opacity-80 transition-opacity">
+                  {comment.user?.avatar ? (
+                    <img src={comment.user.avatar} alt={comment.user.username} className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="text-xs font-bold text-foreground">
+                        {comment.user?.username?.charAt(0).toUpperCase() || "?"}
+                    </span>
+                  )}
+                </div>
+              </Link>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-foreground">
+                  <Link 
+                    href={comment.user?.channelSlug ? `/channel/${comment.user.channelSlug}` : "#"}
+                    className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+                  >
                     {comment.user?.username || "Anonymous"}
-                  </span>
+                  </Link>
                   <span className="text-xs text-muted-foreground">
                     {mounted ? timeAgo(comment.createdAt) : "• • •"}
                   </span>
