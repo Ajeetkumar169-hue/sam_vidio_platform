@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { Eye, ThumbsUp, Clock } from "lucide-react"
+import { Eye, ThumbsUp, Clock, DownloadCloud } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface VideoCardProps {
@@ -72,11 +72,16 @@ function timeAgo(date: string): string {
 }
 
 export function VideoCard({ video, compact, index = 10, className }: VideoCardProps) {
-  const [mounted, setMounted] = useState(false)
+  const [isOfflineReady, setIsOfflineReady] = useState(false)
   
   useEffect(() => {
     setMounted(true)
-  }, [])
+    // Check if offline ready
+    const videoId = video._id || video.id || ""
+    const history = JSON.parse(localStorage.getItem("download_history") || "[]")
+    const isSaved = history.some((item: any) => (item.id === videoId || item._id === videoId) && item.isOfflineReady)
+    setIsOfflineReady(isSaved)
+  }, [video._id, video.id])
   
   const videoId = video._id || video.id || ""
   const isPriority = index < 4
@@ -149,6 +154,12 @@ export function VideoCard({ video, compact, index = 10, className }: VideoCardPr
             <span className="absolute bottom-1.5 right-1.5 z-10 rounded bg-black/80 px-1.5 py-0.5 text-xs font-medium text-foreground">
               {typeof video.duration === "string" ? video.duration : formatDuration(video.duration)}
             </span>
+          )}
+
+          {isOfflineReady && (
+            <div className="absolute top-1.5 left-1.5 z-10 bg-primary/90 text-white p-1 rounded-md shadow-lg" title="Available Offline">
+              <DownloadCloud className="h-3.5 w-3.5" />
+            </div>
           )}
         </div>
 
