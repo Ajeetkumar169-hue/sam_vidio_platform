@@ -22,8 +22,8 @@ export function InstallPwaDialog() {
       e.preventDefault()
       // Stash the event so it can be triggered later.
       setDeferredPrompt(e)
-      // Show our custom UI almost immediately for a strong first impression
-      const timer = setTimeout(() => setIsVisible(true), 1500) 
+      // Show our custom UI immediately for a strong first impression
+      const timer = setTimeout(() => setIsVisible(true), 0) 
       return () => clearTimeout(timer)
     }
 
