@@ -142,6 +142,28 @@ export function ShortsFeed() {
     lastScrollTop.current = scrollTop
   }
 
+  // Keyboard Navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+        if (!containerRef.current) return
+        if (e.key === "ArrowDown") {
+            containerRef.current.scrollBy({ top: window.innerHeight, behavior: "smooth" })
+        } else if (e.key === "ArrowUp") {
+            containerRef.current.scrollBy({ top: -window.innerHeight, behavior: "smooth" })
+        }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [])
+
+  const scrollNext = () => {
+    containerRef.current?.scrollBy({ top: window.innerHeight, behavior: "smooth" })
+  }
+
+  const scrollPrev = () => {
+    containerRef.current?.scrollBy({ top: -window.innerHeight, behavior: "smooth" })
+  }
+
   const handleLike = async (videoId: string) => {
     if (!user) {
       router.push("/login")
@@ -289,10 +311,24 @@ export function ShortsFeed() {
         <div 
           key={short._id} 
           data-index={index}
-          className="short-item h-full w-full snap-start snap-always relative flex items-center justify-center will-change-transform"
+          className="short-item h-full w-full snap-start snap-always relative flex items-center justify-center will-change-transform bg-black/90 lg:bg-background"
           style={{ transform: 'translateZ(0)' }}
         >
-          <div className="h-full w-full relative bg-background overflow-hidden">
+          {/* PC Blur Background */}
+          <div className="absolute inset-0 hidden lg:block overflow-hidden opacity-30 pointer-events-none">
+             <img src={short.videoUrl.replace(/\.[^/.]+$/, ".jpg")} className="w-full h-full object-cover blur-[100px] scale-150" alt="" />
+          </div>
+
+          <div className="h-full w-full lg:h-[92vh] lg:max-w-[420px] lg:rounded-2xl relative bg-black overflow-hidden shadow-2xl border border-white/5">
+            {/* Desktop Navigation Arrows */}
+            <div className="absolute left-full ml-4 bottom-20 hidden lg:flex flex-col gap-4 z-50">
+                <button onClick={scrollPrev} className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center text-white transition-all shadow-xl">
+                    <Zap className="h-6 w-6 rotate-180" />
+                </button>
+                <button onClick={scrollNext} className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center text-white transition-all shadow-xl">
+                    <Zap className="h-6 w-6" />
+                </button>
+            </div>
             <ShortPlayer 
                 src={short.videoUrl} 
                 isActive={index === currentIndex} 
@@ -420,6 +456,19 @@ export function ShortsFeed() {
                           }
                         />
                         <span className="text-[10px] font-bold text-white uppercase tracking-tighter">Share</span>
+                    </div>
+
+                    {/* Download */}
+                    <div className="flex flex-col items-center gap-1">
+                        <DownloadButton 
+                          video={short as any} 
+                          trigger={
+                            <button className="h-10 w-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors">
+                                <DownloadCloud className="h-5 w-5 text-white" />
+                            </button>
+                          }
+                        />
+                        <span className="text-[10px] font-bold text-white uppercase tracking-tighter">Save</span>
                     </div>
                 </div>
               </div>
