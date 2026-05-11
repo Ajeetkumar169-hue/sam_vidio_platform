@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { ThumbsUp, MessageSquare, Share2, Loader2, Zap, Tag, Trash2, DownloadCloud } from "lucide-react"
+import { ThumbsUp, MessageSquare, Share2, Loader2, Zap, Tag, Trash2, DownloadCloud, Play, Pause } from "lucide-react"
 import Hls from "hls.js"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
@@ -568,35 +568,21 @@ function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: 
     }
   }, [src, isStreamtape, isActive, isNext])
 
-  // Handle Play/Pause based on Active State
   useEffect(() => {
     if (isStreamtape) return
     const video = videoRef.current
     if (!video) return
 
     if (isActive) {
-      video.muted = isMuted
-      setIsPaused(false)
       setHasError(false)
-      const playPromise = video.play()
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          // Keep muted if blocked
-          video.muted = true
-          video.play().catch(() => {})
-        })
-      }
+      video.play().catch(() => {})
     } else {
       video.pause()
       video.currentTime = 0
-      setIsPaused(false)
     }
-  }, [isActive, isStreamtape, isMuted])
+  }, [isActive, isStreamtape])
 
-
-
-  // Update togglePlay to unmute on first interaction
-  const handleInteraction = (e: React.MouseEvent) => {
+  const handleInteraction = () => {
     const video = videoRef.current
     if (!video) return
 
@@ -618,7 +604,7 @@ function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: 
     }
   }
 
-  const triggerIcon = (type: "play" | "pause" | "volume" | "mute") => {
+  const triggerIcon = (type: "play" | "pause") => {
     setShowIcon(type)
     if (iconTimeoutRef.current) clearTimeout(iconTimeoutRef.current)
     iconTimeoutRef.current = setTimeout(() => setShowIcon(null), 800)
@@ -639,7 +625,6 @@ function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: 
             allow="autoplay; fullscreen"
             allowFullScreen
         />
-        {/* Overlay to catch clicks and prevent Streamtape popups if possible, but allow interaction */}
         <div className="absolute inset-0 z-10 bg-transparent" />
       </div>
     )
@@ -667,20 +652,12 @@ function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: 
             />
         )}
         
-        {/* Mute/Unmute Button Removed per request */}
-
-        {/* Pause/Play Visual Indicator */}
         {showIcon && (
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/40 p-6 rounded-full animate-out fade-out zoom-out duration-1000 pointer-events-none z-50">
                 {showIcon === "play" ? (
-                    <Zap className="h-10 w-10 text-white fill-current" />
-                ) : showIcon === "pause" ? (
-                    <div className="h-10 w-10 flex gap-2">
-                        <div className="h-full w-3 bg-white rounded-sm" />
-                        <div className="h-full w-3 bg-white rounded-sm" />
-                    </div>
+                    <Play className="h-10 w-10 text-white fill-current" />
                 ) : (
-                    <Zap className="h-10 w-10 text-white fill-current" />
+                    <Pause className="h-10 w-10 text-white fill-current" />
                 )}
             </div>
         )}
