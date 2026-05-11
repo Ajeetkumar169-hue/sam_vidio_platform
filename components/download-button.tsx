@@ -27,7 +27,8 @@ interface DownloadButtonProps {
 }
 
 export function DownloadButton({ video, className, trigger }: DownloadButtonProps) {
-  const [status, setStatus] = useState<"idle" | "preparing" | "completed" | "restricted">("idle")
+  const [status, setStatus] = useState<"idle" | "preparing" | "completed" | "restricted" | "saving">("idle")
+  const [offlineProgress, setOfflineProgress] = useState(0)
   
   // 1. Domain & Extension Validation (Security Hardening)
   const isDirectVideo = 
@@ -57,44 +58,62 @@ export function DownloadButton({ video, className, trigger }: DownloadButtonProp
     return `${safeTitle}_${id}.mp4`
   }
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (status === "restricted") return
 
     try {
-      // 2. Instant History Update (Deduplicated with Timestamp refresh)
+      setStatus("saving")
+      setOfflineProgress(0)
+
+      // 1. Save to PWA Cache for Offline Watching
+      const cache = await caches.open("video-downloads-v1")
+      
+      // Check if already cached
+      const cachedResponse = await cache.match(video.videoUrl)
+      if (!cachedResponse) {
+        toast.info("Saving for offline viewing...", { duration: 2000 })
+        
+        // Fetch and cache the video
+        const response = await fetch(video.videoUrl)
+        if (!response.ok) throw new Error("Failed to fetch video for offline")
+        
+        await cache.put(video.videoUrl, response)
+      }
+
+      // 2. Instant History Update
       const newItem = {
         id: video._id,
+        _id: video._id, // Ensure both ID formats work
         title: video.title,
         thumbnailUrl: video.thumbnailUrl,
+        videoUrl: video.videoUrl,
         views: video.views,
         createdAt: video.createdAt,
         duration: video.duration,
         channel: video.channel,
-        downloadedAt: Date.now()
+        downloadedAt: Date.now(),
+        isOfflineReady: true
       }
 
       let history = JSON.parse(localStorage.getItem("download_history") || "[]")
-      // Remove existing to move to top
       history = history.filter((item: any) => item.id !== video._id)
       history.unshift(newItem)
-      
-      // Limit history to 100 items to protect LocalStorage quota
       localStorage.setItem("download_history", JSON.stringify(history.slice(0, 100)))
       
-      // 3. Trigger Browser-Native Download (Zero-Memory Anchor Method)
+      // 3. Trigger Browser-Native Download (Optional fallback for physical file)
       const filename = sanitizeFilename(video.title, video._id)
       const link = document.body.appendChild(document.createElement("a"))
       link.href = video.videoUrl
       link.download = filename
       link.click()
-      
-      // 4. Lifecycle Management
       document.body.removeChild(link)
+      
       setStatus("completed")
-      toast.success("Download started!")
+      toast.success("Saved for offline viewing!")
     } catch (error) {
-       console.error("Download trigger failed:", error)
-       toast.error("Could not initialize download")
+       console.error("Offline save failed:", error)
+       toast.error("Could not save for offline viewing")
+       setStatus("idle")
     }
   }
 
@@ -142,6 +161,20 @@ export function DownloadButton({ video, className, trigger }: DownloadButtonProp
              <ExternalLink className="h-4 w-4" />
           </button>
       </div>
+    )
+  }
+
+  if (status === "saving") {
+    return (
+      <Button 
+        variant="outline" 
+        size="sm" 
+        disabled
+        className={cn("gap-2 border-primary/20 bg-primary/5", className)}
+      >
+        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+        <span className="hidden sm:inline">Saving Offline...</span>
+      </Button>
     )
   }
 

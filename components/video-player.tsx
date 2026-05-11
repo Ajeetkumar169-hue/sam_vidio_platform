@@ -24,6 +24,7 @@ export function VideoPlayer({ url, poster, className = "", qualities = [] }: Vid
   const [embedUrl, setEmbedUrl] = useState<string>("")
   const [error, setError] = useState<string | null>(null)
   const [currentUrl, setCurrentUrl] = useState(url)
+  const [isOffline, setIsOffline] = useState(false)
   const [currentQuality, setCurrentQuality] = useState("Auto")
   const [isPlaying, setIsPlaying] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
@@ -31,7 +32,26 @@ export function VideoPlayer({ url, poster, className = "", qualities = [] }: Vid
   const [showControls, setShowControls] = useState(true)
 
   useEffect(() => {
-    setCurrentUrl(url)
+    const checkCache = async () => {
+      try {
+        const cache = await caches.open("video-downloads-v1")
+        const cachedResponse = await cache.match(url)
+        if (cachedResponse) {
+          const blob = await cachedResponse.blob()
+          const objectUrl = URL.createObjectURL(blob)
+          setCurrentUrl(objectUrl)
+          setIsOffline(true)
+          return () => URL.revokeObjectURL(objectUrl)
+        } else {
+          setCurrentUrl(url)
+          setIsOffline(false)
+        }
+      } catch (e) {
+        setCurrentUrl(url)
+        setIsOffline(false)
+      }
+    }
+    checkCache()
   }, [url])
 
   useEffect(() => {
@@ -243,6 +263,9 @@ export function VideoPlayer({ url, poster, className = "", qualities = [] }: Vid
           
           {/* Progress Bar */}
           <div className="px-4 mb-2">
+            <div className="flex justify-between items-center mb-1">
+               {isOffline && <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Offline Mode</span>}
+            </div>
             <div className="h-1 w-full bg-white/20 rounded-full overflow-hidden cursor-pointer group/progress">
               <div 
                 className="h-full bg-primary transition-all duration-100" 
