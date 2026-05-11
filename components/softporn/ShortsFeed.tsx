@@ -126,7 +126,11 @@ export function ShortsFeed() {
     const timer = setTimeout(() => {
         const elements = document.querySelectorAll(".short-item")
         elements.forEach((el) => observer.observe(el))
-    }, 500)
+        // Force check the first item
+        if (elements.length > 0 && currentIndex === 0) {
+            setCurrentIndex(0)
+        }
+    }, 100)
 
     return () => {
         observer.disconnect()
@@ -579,6 +583,8 @@ function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: 
     const video = videoRef.current
     if (!video) return
 
+    let retryTimer: NodeJS.Timeout
+
     if (isActive) {
       setHasError(false)
       video.muted = isMuted
@@ -592,11 +598,22 @@ function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: 
           video.play().catch(() => {})
         })
       }
+
+      // Fallback: If still paused after 1s, try play again
+      retryTimer = setTimeout(() => {
+        if (isActive && video.paused && !needsInteraction) {
+            video.play().catch(() => {})
+        }
+      }, 1500)
     } else {
       video.pause()
       video.currentTime = 0
     }
-  }, [isActive, isStreamtape, isMuted])
+
+    return () => {
+        if (retryTimer) clearTimeout(retryTimer)
+    }
+  }, [isActive, isStreamtape, isMuted, needsInteraction])
 
   const handleInteraction = () => {
     const video = videoRef.current
