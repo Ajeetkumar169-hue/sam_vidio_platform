@@ -77,7 +77,7 @@ export default function HomePage() {
   }, [])
 
   return (
-    <div className="max-w-screen-xl mx-auto px-2 sm:px-4 md:px-6 py-6">
+    <div className="max-w-screen-xl mx-auto px-2 sm:px-4 md:px-6 pt-1 pb-8">
       {/* Hero Section */}
       <section className="mb-8 rounded-xl bg-gradient-to-r from-primary/20 via-primary/10 to-transparent p-6 lg:p-8">
         <h1 className="text-balance text-2xl font-bold text-foreground lg:text-3xl">
