@@ -21,6 +21,7 @@ import {
     Sparkles,
     Megaphone,
     Camera,
+    Zap,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useEffect, useState } from "react"
@@ -62,6 +63,7 @@ export function AdminSidebar({ role, open, onClose }: AdminSidebarProps) {
         { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
         { href: "/admin/announcements", label: "Announcements", icon: Megaphone },
         { href: "/admin/videos", label: "Videos", icon: Film },
+        { href: "/admin/shorts", label: "Shorts", icon: Zap },
         { href: "/admin/categories", label: "Categories", icon: Grid3X3, disabled: role !== "admin" },
         { href: "/admin/actors", label: "Actors", icon: Camera, disabled: role !== "admin" },
         { href: "/admin/channels", label: "Channels", icon: Tv, disabled: role !== "admin" },
