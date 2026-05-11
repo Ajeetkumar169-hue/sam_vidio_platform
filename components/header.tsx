@@ -393,7 +393,15 @@ export function Header({ onMenuClick }: HeaderProps) {
                         )}
                         <div className="flex-1 space-y-1">
                           <p className={cn("text-xs leading-snug", !n.read ? "font-bold text-foreground" : "text-foreground/60")}>
-                            <span className="text-primary">{n.meta?.channelName || "Channel"}</span> uploaded: {n.meta?.title || "New video"}
+                            {n.type === "system" ? (
+                              <>
+                                <span className="text-primary font-black">SYSTEM:</span> {n.meta?.title || "Official Announcement"}
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-primary">{n.meta?.channelName || "Channel"}</span> uploaded: {n.meta?.title || "New video"}
+                              </>
+                            )}
                           </p>
                           <p className="text-[10px] text-foreground/30 font-medium">
                             {new Date(n.createdAt).toLocaleDateString()}
@@ -417,7 +425,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="hidden md:flex h-9 w-9 p-0 rounded-full border border-foreground/10 hover:border-foreground/20 transition-all overflow-hidden premium-shadow">
+                <Button variant="ghost" size="icon" className="flex h-9 w-9 p-0 rounded-full border border-foreground/10 hover:border-foreground/20 transition-all overflow-hidden premium-shadow">
                    {user.avatar ? (
                       <img src={user.avatar} alt={user.username} className="h-full w-full object-cover transition-transform hover:scale-110 duration-500" />
                     ) : (

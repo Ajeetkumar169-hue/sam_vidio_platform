@@ -8,6 +8,7 @@ import { toast } from "sonner"
 
 export default function AnnouncementsPage() {
     const { user } = useAuth()
+    const [title, setTitle] = useState("")
     const [message, setMessage] = useState("")
     const [sending, setSending] = useState(false)
     const [file, setFile] = useState<File | null>(null)
@@ -58,9 +59,26 @@ export default function AnnouncementsPage() {
             })
             
             const data = await res.json()
-            if (!res.ok) throw new Error(data.error || "Failed to send broadcast")
+            if (!res.ok) throw new Error(data.error || "Failed to send chat broadcast")
+
+            // 4. Send System-Wide Notification (Header + Email)
+            try {
+                await fetch("/api/admin/announcements", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ 
+                        title: title.trim() || "Official Announcement", 
+                        content: message.trim(),
+                        link: mediaUrl || undefined
+                    })
+                })
+            } catch (notifErr) {
+                console.error("Failed to send system notification:", notifErr)
+                // We don't throw here to ensure the chat message is still considered sent
+            }
 
             toast.success("Announcement broadcasted successfully!", { id: toastId })
+            setTitle("")
             setMessage("")
             setFile(null)
             
@@ -93,6 +111,17 @@ export default function AnnouncementsPage() {
                         </div>
                         
                         <form onSubmit={handleBroadcast} className="relative z-10 space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold uppercase tracking-widest text-foreground/50 ml-1">Notification Title</label>
+                                <input 
+                                    type="text"
+                                    className="w-full bg-background/50 border border-border rounded-xl p-4 focus:ring-1 ring-primary/50 outline-none transition-all"
+                                    placeholder="e.g. Weekend Special, New Feature, etc."
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                />
+                            </div>
+
                             <div className="space-y-2">
                                 <label className="text-sm font-bold uppercase tracking-widest text-foreground/50 ml-1">Announcement Message</label>
                                 <textarea 

@@ -14,9 +14,11 @@ export async function POST() {
         if (!user) return ApiResponse.unauthorized();
 
         const timestamp = Math.round(new Date().getTime() / 1000);
+        const folder = "shorts";
         const signature = cloudinary.utils.api_sign_request(
             {
                 timestamp: timestamp,
+                folder: folder,
             },
             process.env.CLOUDINARY_API_SECRET!
         );
