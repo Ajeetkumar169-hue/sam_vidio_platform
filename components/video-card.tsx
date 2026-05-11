@@ -72,6 +72,7 @@ function timeAgo(date: string): string {
 }
 
 export function VideoCard({ video, compact, index = 10, className }: VideoCardProps) {
+  const [mounted, setMounted] = useState(false)
   const [isOfflineReady, setIsOfflineReady] = useState(false)
   
   useEffect(() => {
