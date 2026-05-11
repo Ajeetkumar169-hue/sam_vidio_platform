@@ -260,7 +260,7 @@ export function ShortsFeed() {
       {shorts.map((short, index) => (
         <div 
           key={short._id} 
-          className="h-full w-full snap-start relative flex items-center justify-center"
+          className="h-full w-full snap-start snap-always relative flex items-center justify-center"
         >
           <div className="h-full aspect-[9/16] relative bg-background shadow-2xl">
             <ShortPlayer src={short.videoUrl} isActive={index === currentIndex} />
