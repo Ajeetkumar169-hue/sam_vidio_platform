@@ -117,7 +117,10 @@ export function ShortsFeed() {
           }
         })
       },
-      { threshold: 0.6 }
+      { 
+        threshold: 0.5,
+        rootMargin: "100px" // Load videos slightly before they come into view
+      }
     )
 
     const timer = setTimeout(() => {
@@ -504,11 +507,12 @@ export function ShortsFeed() {
 
 function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: string, isActive: boolean, isNext?: boolean }) {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const [isMuted, setIsMuted] = useState(true) // Start muted for better autoplay success
+  const [isMuted, setIsMuted] = useState(false) // Unmuted by default
   const [isPaused, setIsPaused] = useState(false)
   const [showIcon, setShowIcon] = useState<"play" | "pause" | "volume" | "mute" | null>(null)
   const iconTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [hasError, setHasError] = useState(false)
+  const [needsInteraction, setNeedsInteraction] = useState(false)
 
   const isStreamtape = src.includes("streamtape.com/")
   let embedUrl = src
@@ -535,9 +539,11 @@ function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: 
             enableWorker: true,
             lowLatencyMode: true,
             backBufferLength: 90,
-            maxBufferLength: 30,
-            maxMaxBufferLength: 600,
+            maxBufferLength: 20, // Smaller buffer for faster switching
+            maxMaxBufferLength: 40,
             appendErrorMaxRetry: 5,
+            nudgeOffset: 0.1,
+            nudgeMaxRetry: 5,
         })
         hls.loadSource(src)
         hls.attachMedia(video)
@@ -575,12 +581,22 @@ function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: 
 
     if (isActive) {
       setHasError(false)
-      video.play().catch(() => {})
+      video.muted = isMuted
+      const playPromise = video.play()
+      if (playPromise !== undefined) {
+        playPromise.catch((error) => {
+          console.log("Autoplay blocked, muting:", error)
+          video.muted = true
+          setIsMuted(true)
+          setNeedsInteraction(true)
+          video.play().catch(() => {})
+        })
+      }
     } else {
       video.pause()
       video.currentTime = 0
     }
-  }, [isActive, isStreamtape])
+  }, [isActive, isStreamtape, isMuted])
 
   const handleInteraction = () => {
     const video = videoRef.current
@@ -663,6 +679,28 @@ function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: 
                 ) : (
                     <Pause className="h-10 w-10 text-white fill-current" />
                 )}
+            </div>
+        )}
+
+        {needsInteraction && isActive && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
+                <Button 
+                    variant="secondary" 
+                    className="rounded-full font-bold shadow-2xl animate-bounce"
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        const video = videoRef.current
+                        if (video) {
+                            video.muted = false
+                            setIsMuted(false)
+                            setNeedsInteraction(false)
+                            video.play().catch(() => {})
+                        }
+                    }}
+                >
+                    <Play className="h-4 w-4 mr-2 fill-current" />
+                    Tap to Play with Sound
+                </Button>
             </div>
         )}
     </div>
