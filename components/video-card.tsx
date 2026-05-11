@@ -94,7 +94,7 @@ export function VideoCard({ video, compact, index = 10, className }: VideoCardPr
   )
 
   return (
-    <Link href={`/watch/${videoId}`} className={cn("group block", className)}>
+    <Link href={`/watch/${videoId}`} className={cn("group block content-visibility-auto", className)}>
       <div className={cn("overflow-hidden rounded-lg", compact ? "flex gap-3" : "flex flex-col")}>
         {/* Thumbnail & Preview */}
         <div
@@ -141,7 +141,8 @@ export function VideoCard({ video, compact, index = 10, className }: VideoCardPr
             muted
             loop
             playsInline
-            className="absolute inset-0 h-full w-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            preload="none"
+            className="absolute inset-0 h-full w-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-300 backface-hidden"
           />
 
           {video.duration && (

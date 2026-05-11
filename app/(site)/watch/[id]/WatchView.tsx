@@ -446,7 +446,7 @@ export function WatchView({ initialVideo }: WatchViewProps) {
               </div>
 
               {/* Related Video List */}
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 content-visibility-auto">
                 {related.length > 0 ? (
                   related.map((v) => (
                     <VideoCard key={v._id} video={v} compact className="transition-all duration-300" />

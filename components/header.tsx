@@ -157,7 +157,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-foreground/5 bg-background/60 px-6 backdrop-blur-xl luxury-easing">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-foreground/5 bg-background/60 px-6 backdrop-blur-md luxury-easing mobile-nav-gpu">
       {/* Left: Logo */}
       <div className="flex items-center gap-4 md:w-1/4">
         <Link href="/" className="logo-text text-2xl tracking-tighter" data-text="SAM">

@@ -20,7 +20,7 @@ export function MobileNav({ onMoreClick }: MobileNavProps) {
   ]
 
   return (
-    <div className="fixed bottom-6 left-1/2 z-[100] h-16 w-[90%] -translate-x-1/2 lg:hidden">
+    <div className="fixed bottom-6 left-1/2 z-[100] h-16 w-[90%] -translate-x-1/2 lg:hidden mobile-nav-gpu">
       <nav className="flex h-full w-full items-center justify-around rounded-full border border-foreground/10 glass-heavy px-4 shadow-2xl">
         {tabs.map((tab) => {
           const isActive = pathname === tab.href

@@ -54,9 +54,20 @@ export function VideoPlayer({ url, poster, className = "", qualities = [] }: Vid
 
     if (isHLS) {
         if (Hls.isSupported()) {
-            const hls = new Hls()
+            const hls = new Hls({
+                enableWorker: true,
+                lowLatencyMode: true,
+                backBufferLength: 90,
+                maxBufferLength: 30,
+                maxMaxBufferLength: 600,
+                appendErrorMaxRetry: 3,
+                autoStartLoad: true
+            })
             hls.loadSource(currentUrl)
             hls.attachMedia(video)
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                // Pre-fetch start
+            })
             return () => {
               hls.destroy()
               video.removeEventListener("play", handlePlay)
@@ -208,7 +219,7 @@ export function VideoPlayer({ url, poster, className = "", qualities = [] }: Vid
           className="h-full w-full object-contain cursor-pointer"
           poster={poster}
           playsInline
-          preload="metadata"
+          preload="auto"
           onClick={togglePlay}
           onDoubleClick={toggleFullscreen}
           onError={(e) => {

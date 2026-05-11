@@ -110,9 +110,18 @@
     border-color: var(--color-border);
     outline-color: color-mix(in oklch, var(--color-ring) 50%, transparent);
     /* Strict Transition Hardening */
-    transition-property: background-color, border-color, color, fill, stroke;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 300ms;
+    transition-property: background-color, border-color, color, fill, stroke, transform;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+    transition-duration: 200ms;
+    /* GPU acceleration by default for interactive elements */
+    backface-visibility: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Optimize Rendering */
+  .content-visibility-auto {
+    content-visibility: auto;
+    contain-intrinsic-size: 1px 300px;
   }
 
   body {
@@ -347,5 +356,20 @@
 
   .animate-marquee:hover {
     animation-play-state: paused;
+  }
+
+  /* GPU Optimized Mobile Navigation */
+  .mobile-nav-gpu {
+    will-change: transform, opacity;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000;
+  }
+
+  /* Performance Boost for Scroll Containers */
+  .smooth-scroll-gpu {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    will-change: scroll-position;
   }
 }
