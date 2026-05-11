@@ -27,10 +27,12 @@ export async function GET(req: Request) {
             query.dislikes = { $gt: 0 }
             sort = { dislikes: -1 }
         } else if (status === "pending") {
-            query.status = { $in: ["pending", "ready"] }
+            query.status = { $in: ["pending", "ready", "processing"] }
         } else if (status !== "all") {
             query.status = status
         }
+
+        console.log("🔍 [ADMIN SHORTS API] Query:", JSON.stringify(query))
 
         if (search) {
             query.$or = [

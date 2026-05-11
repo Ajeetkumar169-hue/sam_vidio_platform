@@ -28,7 +28,7 @@ export default function AdminVideos() {
     const [videos, setVideos] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [search, setSearch] = useState("")
-    const [statusFilter, setStatusFilter] = useState("approved")
+    const [statusFilter, setStatusFilter] = useState("pending")
     const [page, setPage] = useState(1)
     const [limit, setLimit] = useState(10)
     const [pagination, setPagination] = useState({ total: 0, totalPages: 1 })
