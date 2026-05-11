@@ -21,6 +21,7 @@ export const metadata: Metadata = {
       { url: '/apple-icon.png' },
     ],
   },
+  manifest: '/manifest.json',
 }
 
 export const viewport: Viewport = {
@@ -57,6 +58,22 @@ export default function RootLayout({
             </div>
             <Toaster />
             <Script src="https://upload-widget.cloudinary.com/global/all.js" strategy="afterInteractive" />
+            <Script id="register-sw" strategy="afterInteractive">
+              {`
+                if ('serviceWorker' in navigator) {
+                  window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('/sw.js').then(
+                      function(registration) {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                      },
+                      function(err) {
+                        console.log('ServiceWorker registration failed: ', err);
+                      }
+                    );
+                  });
+                }
+              `}
+            </Script>
           </AuthProvider>
         </ThemeProvider>
       </body>

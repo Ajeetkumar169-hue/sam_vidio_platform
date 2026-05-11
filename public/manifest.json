@@ -1,0 +1,24 @@
+{
+  "name": "SAM Video Platform",
+  "short_name": "SAM",
+  "description": "A modern video sharing platform with channels, categories, and trending content",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0f19",
+  "theme_color": "#0f0f19",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
