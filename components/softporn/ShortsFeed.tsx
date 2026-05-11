@@ -593,10 +593,18 @@ function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: 
     }
   }, [isActive, isStreamtape, isMuted])
 
-  // Toggle Play/Pause on tap
-  const togglePlay = (e: React.MouseEvent) => {
+
+
+  // Update togglePlay to unmute on first interaction
+  const handleInteraction = (e: React.MouseEvent) => {
     const video = videoRef.current
     if (!video) return
+
+    // Unmute on first interaction
+    if (isMuted) {
+        video.muted = false
+        setIsMuted(false)
+    }
 
     if (video.paused) {
       video.play().then(() => {
@@ -637,18 +645,8 @@ function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: 
     )
   }
 
-  const toggleMute = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    const video = videoRef.current
-    if (!video) return
-    const newMuted = !isMuted
-    video.muted = newMuted
-    setIsMuted(newMuted)
-    triggerIcon(newMuted ? "mute" : "volume")
-  }
-
   return (
-    <div className="relative h-full w-full group cursor-pointer bg-black" onClick={togglePlay}>
+    <div className="relative h-full w-full group cursor-pointer bg-black" onClick={handleInteraction}>
         {hasError ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center">
                 <Zap className="h-10 w-10 text-destructive animate-pulse" />
@@ -669,13 +667,7 @@ function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: 
             />
         )}
         
-        {/* Mute/Unmute Overlay Button */}
-        <button 
-          onClick={toggleMute}
-          className="absolute top-6 right-6 z-50 h-10 w-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/60 transition-all border border-white/10"
-        >
-            {isMuted ? <Zap className="h-5 w-5 fill-current opacity-50" /> : <Zap className="h-5 w-5 fill-current" />}
-        </button>
+        {/* Mute/Unmute Button Removed per request */}
 
         {/* Pause/Play Visual Indicator */}
         {showIcon && (
@@ -687,20 +679,9 @@ function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: 
                         <div className="h-full w-3 bg-white rounded-sm" />
                         <div className="h-full w-3 bg-white rounded-sm" />
                     </div>
-                ) : showIcon === "volume" ? (
-                    <Zap className="h-10 w-10 text-white fill-current" />
                 ) : (
-                    <Zap className="h-10 w-10 text-white opacity-40" />
+                    <Zap className="h-10 w-10 text-white fill-current" />
                 )}
-            </div>
-        )}
-
-        {isMuted && isActive && !hasError && (
-            <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-black/50 px-4 py-2 rounded-full pointer-events-none z-50 border border-white/10">
-                <p className="text-white font-bold text-[10px] uppercase tracking-widest flex items-center gap-2">
-                    <Zap className="h-3 w-3 fill-current" />
-                    Tap to Unmute
-                </p>
             </div>
         )}
     </div>
