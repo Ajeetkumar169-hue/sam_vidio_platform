@@ -14,15 +14,13 @@ export function InstallPwaDialog() {
   useEffect(() => {
     setMounted(true)
     
-    // 1. Check if already installed
+    // Check if already installed
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone
     if (isStandalone) return
 
-    // 2. Check if suppressed
-    const dismissedUntil = localStorage.getItem("pwa-prompt-dismissed")
-    if (dismissedUntil && Date.now() < parseInt(dismissedUntil)) return
+    // FOR TESTING: Clear any previous dismissal to ensure it shows for the user now
+    // localStorage.removeItem("pwa-prompt-dismissed")
 
-    // 3. Listen for the native install prompt
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault()
       setDeferredPrompt(e)
@@ -31,10 +29,13 @@ export function InstallPwaDialog() {
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt)
 
-    // 4. Force show after 0.5s for all devices
+    // Force show after a tiny delay for ALL mobile users
     const forceShowTimer = setTimeout(() => {
-      setIsVisible(true)
-    }, 500)
+      // Only show if not already dismissed in this exact session
+      if (!sessionStorage.getItem("pwa-dismissed-session")) {
+         setIsVisible(true)
+      }
+    }, 1000)
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt)
@@ -46,49 +47,49 @@ export function InstallPwaDialog() {
     if (deferredPrompt) {
         deferredPrompt.prompt()
         const { outcome } = await deferredPrompt.userChoice
-        console.log(`User response to the install prompt: ${outcome}`)
         setDeferredPrompt(null)
         setIsVisible(false)
     } else {
-        // iOS Manual
-        alert("To Install: \n1. Tap 'Share' button \n2. Select 'Add to Home Screen'")
+        // iOS Manual Guide
+        alert("SAM App Installation: \n\n1. Tap 'Share' button at bottom \n2. Scroll down & select 'Add to Home Screen' \n3. Tap 'Add' \n\nEnjoy the premium experience!")
         setIsVisible(false)
     }
   }
 
-  const handleDismiss = (durationInMinutes: number = 1440) => {
+  const handleDismiss = (isPermanent = false) => {
     setIsVisible(false)
-    const expiry = Date.now() + durationInMinutes * 60 * 1000
-    localStorage.setItem("pwa-prompt-dismissed", expiry.toString())
+    if (isPermanent) {
+       localStorage.setItem("pwa-prompt-dismissed", (Date.now() + 48 * 60 * 60 * 1000).toString())
+    }
+    sessionStorage.setItem("pwa-dismissed-session", "true")
   }
 
   if (!mounted || !isVisible) return null
 
   return (
-    <div className="relative overflow-hidden rounded-[2.5rem] bg-[#0F0F19]/90 backdrop-blur-2xl border border-white/10 p-6 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)] animate-in fade-in zoom-in-95 slide-in-from-bottom-10 duration-700 ease-out">
+    <div className="relative overflow-hidden rounded-[2.5rem] bg-black/90 backdrop-blur-3xl border border-white/20 p-6 shadow-[0_0_80px_rgba(0,0,0,0.9)] animate-in fade-in zoom-in-95 slide-in-from-bottom-20 duration-1000 ease-out">
       {/* Animated Accent Glow */}
-      <div className="absolute -top-24 -right-24 h-48 w-48 bg-red-600/20 blur-[80px] rounded-full animate-pulse" />
-      <div className="absolute -bottom-24 -left-24 h-48 w-48 bg-blue-500/10 blur-[80px] rounded-full" />
+      <div className="absolute -top-24 -right-24 h-48 w-48 bg-red-600/30 blur-[80px] rounded-full animate-pulse" />
       
       {/* Close Button (Cut) */}
       <button 
-        onClick={() => handleDismiss(2880)} 
-        className="absolute top-5 right-5 h-8 w-8 rounded-full bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all z-20"
+        onClick={() => handleDismiss(true)} 
+        className="absolute top-5 right-5 h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/20 transition-all z-20"
       >
-        <X className="h-4 w-4" />
+        <X className="h-5 w-5" />
       </button>
 
       <div className="relative z-10 flex flex-col gap-6">
         <div className="flex items-center gap-5">
-          <div className="relative h-16 w-16 shrink-0">
-             <div className="absolute inset-0 bg-red-600/20 blur-xl rounded-full animate-pulse" />
-             <div className="relative h-full w-full rounded-2xl bg-gradient-to-br from-red-600 to-red-900 p-[1px] overflow-hidden shadow-2xl">
-               <div className="h-full w-full rounded-2xl bg-black flex items-center justify-center p-2">
+          <div className="relative h-20 w-20 shrink-0">
+             <div className="absolute inset-0 bg-red-600/30 blur-2xl rounded-full animate-pulse" />
+             <div className="relative h-full w-full rounded-3xl bg-gradient-to-br from-red-600 to-red-900 p-[2px] overflow-hidden shadow-2xl">
+               <div className="h-full w-full rounded-3xl bg-black flex items-center justify-center p-3">
                  <Image 
                    src="/logo.png" 
                    alt="SAM Logo" 
-                   width={64} 
-                   height={64}
+                   width={80} 
+                   height={80}
                    className="w-full h-full object-contain"
                  />
                </div>
@@ -97,41 +98,41 @@ export function InstallPwaDialog() {
           
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <h3 className="font-black text-xl tracking-tighter text-white uppercase">Install App</h3>
-              <Sparkles className="h-4 w-4 text-red-600 animate-bounce" />
+              <h3 className="font-black text-2xl tracking-tighter text-white uppercase italic">Get the App</h3>
+              <Sparkles className="h-5 w-5 text-red-600 animate-bounce" />
             </div>
-            <p className="text-xs text-white/60 font-medium leading-relaxed">
-              Add <span className="text-red-600 font-bold">SAM Platform</span> to your home screen.
+            <p className="text-sm text-white/70 font-medium leading-relaxed">
+              Install <span className="text-red-600 font-bold">SAM</span> for the fastest video experience.
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5">
-              <CheckCircle2 className="h-3 w-3 text-red-600 shrink-0" />
-              <span className="text-[10px] font-bold text-white/80 uppercase tracking-wider">Fast Load</span>
+        <div className="grid grid-cols-2 gap-3">
+           <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/5 border border-white/10">
+              <CheckCircle2 className="h-4 w-4 text-red-600 shrink-0" />
+              <span className="text-[11px] font-bold text-white/90 uppercase tracking-widest">High Speed</span>
            </div>
-           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5">
-              <CheckCircle2 className="h-3 w-3 text-red-600 shrink-0" />
-              <span className="text-[10px] font-bold text-white/80 uppercase tracking-wider">Offline</span>
+           <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white/5 border border-white/10">
+              <Smartphone className="h-4 w-4 text-red-600 shrink-0" />
+              <span className="text-[11px] font-bold text-white/90 uppercase tracking-widest">Premium</span>
            </div>
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3 pt-2">
           <Button 
             onClick={handleInstall}
-            className="relative w-full rounded-xl bg-red-600 hover:bg-red-700 text-white font-black h-12 text-base shadow-xl shadow-red-600/20 overflow-hidden group/btn active-bounce"
+            className="relative w-full rounded-2xl bg-red-600 hover:bg-red-700 text-white font-black h-14 text-lg shadow-[0_10px_30px_-5px_rgba(220,38,38,0.5)] overflow-hidden group/btn active-bounce transition-all duration-300"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:animate-shimmer" />
-            <Download className="h-4 w-4 mr-2" />
-            Install Now
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover/btn:animate-shimmer" />
+            <Download className="h-6 w-6 mr-3" />
+            INSTALL NOW
           </Button>
           
           <button 
-            onClick={() => handleDismiss(2)} 
-            className="w-full h-8 text-white/40 hover:text-white text-[10px] font-black uppercase tracking-[0.2em] transition-colors"
+            onClick={() => handleDismiss(false)} 
+            className="w-full h-10 text-white/40 hover:text-white text-[11px] font-black uppercase tracking-[0.3em] transition-colors"
           >
-            Maybe Later
+            MAYBE LATER
           </button>
         </div>
       </div>
