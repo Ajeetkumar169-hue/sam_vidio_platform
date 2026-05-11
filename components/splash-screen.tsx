@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Zap } from "lucide-react"
 
 export function SplashScreen({ onComplete }: { onComplete?: () => void }) {
   const [isVisible, setIsVisible] = useState(true)
@@ -48,8 +47,8 @@ export function SplashScreen({ onComplete }: { onComplete?: () => void }) {
 
       <div className="relative flex flex-col items-center gap-10">
         {/* Logo Animation */}
-        <div className={`h-36 w-36 rounded-[40px] bg-primary flex items-center justify-center shadow-2xl shadow-primary/30 transition-all duration-1000 transform ${isAnimating ? 'scale-100 rotate-0' : 'scale-0 -rotate-12'}`}>
-           <Zap className="h-20 w-20 text-white fill-current animate-pulse" />
+        <div className={`h-40 w-40 rounded-[40px] overflow-hidden shadow-2xl shadow-primary/30 transition-all duration-1000 transform ${isAnimating ? 'scale-100 rotate-0' : 'scale-0 -rotate-12'}`}>
+           <img src="/icon.svg" alt="SAM Logo" className="w-full h-full object-cover" />
         </div>
 
         {/* Text Animation */}

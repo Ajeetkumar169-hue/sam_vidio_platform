@@ -8,8 +8,11 @@ import { MobileNav } from "@/components/mobile-nav"
 import { MobileDrawer } from "@/components/mobile-drawer"
 import { AgeVerification } from "@/components/age-verification"
 import { cn } from "@/lib/utils"
+import { SplashScreen } from "@/components/splash-screen"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const [isSplashDone, setIsSplashDone] = useState(false)
+  
   // Desktop Sidebar States
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarPinned, setSidebarPinned] = useState(false)
@@ -21,6 +24,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isShorts = pathname === "/softporn"
   
   useEffect(() => {
+    if (sessionStorage.getItem("splash-shown")) {
+        setIsSplashDone(true)
+    }
     const handleHide = (e: any) => setHideNavs(e.detail)
     window.addEventListener("toggle-navs", handleHide as any)
     return () => window.removeEventListener("toggle-navs", handleHide as any)
@@ -66,9 +72,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      {!isSplashDone && <SplashScreen onComplete={() => setIsSplashDone(true)} />}
       <AgeVerification />
       
-      <div className="flex h-screen flex-col relative overflow-hidden bg-background">
+      <div className={cn(
+        "flex h-screen flex-col relative overflow-hidden bg-background transition-opacity duration-500",
+        isSplashDone ? "opacity-100" : "opacity-0 pointer-events-none"
+      )}>
         
         {/* Invisible Hover Zone (Desktop Only) */}
         <div 
