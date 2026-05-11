@@ -583,7 +583,7 @@ function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: 
     const video = videoRef.current
     if (!video) return
 
-    let retryTimer: NodeJS.Timeout
+    let retryTimer: any
 
     if (isActive) {
       setHasError(false)
