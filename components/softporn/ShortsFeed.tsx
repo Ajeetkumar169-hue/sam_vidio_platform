@@ -107,24 +107,39 @@ export function ShortsFeed() {
       .catch(() => setLoading(false))
   }, [])
 
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const index = parseInt(entry.target.getAttribute("data-index") || "0")
+            setCurrentIndex(index)
+          }
+        })
+      },
+      { threshold: 0.6 }
+    )
+
+    const timer = setTimeout(() => {
+        const elements = document.querySelectorAll(".short-item")
+        elements.forEach((el) => observer.observe(el))
+    }, 500)
+
+    return () => {
+        observer.disconnect()
+        clearTimeout(timer)
+    }
+  }, [shorts.length])
+
   const handleScroll = () => {
     if (!containerRef.current) return
-    const { scrollTop, clientHeight } = containerRef.current
-    
-    // Upar scroll (next video) -> hide, Neeche scroll (prev video) -> show
-    if (scrollTop > lastScrollTop.current + 10) {
+    const { scrollTop } = containerRef.current
+    if (scrollTop > lastScrollTop.current + 50) {
         window.dispatchEvent(new CustomEvent("toggle-navs", { detail: true }))
-    } else if (scrollTop < lastScrollTop.current - 10) {
+    } else if (scrollTop < lastScrollTop.current - 50) {
         window.dispatchEvent(new CustomEvent("toggle-navs", { detail: false }))
     }
-    
     lastScrollTop.current = scrollTop
-
-    const index = Math.round(scrollTop / clientHeight)
-    if (index !== currentIndex) {
-      setCurrentIndex(index)
-      setExpandedId(null) // Reset description on swipe
-    }
   }
 
   const handleLike = async (videoId: string) => {
@@ -268,18 +283,20 @@ export function ShortsFeed() {
       ref={containerRef}
       onScroll={handleScroll}
       onClick={showNavbars}
-      className="h-full w-full overflow-y-scroll snap-y snap-mandatory no-scrollbar bg-background"
+      className="h-full w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar bg-background"
     >
       {shorts.map((short, index) => (
         <div 
           key={short._id} 
-          className="h-full w-full snap-start snap-always relative flex items-center justify-center"
+          data-index={index}
+          className="short-item h-full w-full snap-start snap-always relative flex items-center justify-center will-change-transform"
+          style={{ transform: 'translateZ(0)' }}
         >
           <div className="h-full w-full relative bg-background overflow-hidden">
             <ShortPlayer 
                 src={short.videoUrl} 
                 isActive={index === currentIndex} 
-                isNext={index === currentIndex + 1}
+                isNext={index === currentIndex + 1 || index === currentIndex + 2}
             />
 
             {/* UI Overlay */}
@@ -502,14 +519,14 @@ function ShortPlayer({ src, isActive, isNext }: { src: string, isActive: boolean
 
   // Toggle Play/Pause on tap
   const togglePlay = (e: React.MouseEvent) => {
-    // e.stopPropagation() // Allow bubbling so navbars also toggle
     const video = videoRef.current
     if (!video) return
 
     if (video.paused) {
-      video.play()
-      setIsPaused(false)
-      triggerIcon("play")
+      video.play().then(() => {
+        setIsPaused(false)
+        triggerIcon("play")
+      }).catch(() => {})
     } else {
       video.pause()
       setIsPaused(true)
