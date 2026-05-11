@@ -16,18 +16,28 @@ export async function GET(req: Request) {
 
         const { searchParams } = new URL(req.url)
         const status = searchParams.get("status") || "pending"
+        const search = searchParams.get("search")
         const page = parseInt(searchParams.get("page") || "1")
         const limit = parseInt(searchParams.get("limit") || "10")
         const skip = (page - 1) * limit
 
-        const query: any = { isShort: { $ne: true } }
+        const query: any = {}
         let sort: any = { createdAt: -1 }
 
         if (status === "high-dislikes") {
             query.dislikes = { $gt: 0 }
             sort = { dislikes: -1 }
-        } else {
+        } else if (status === "pending") {
+            query.status = { $in: ["pending", "ready"] }
+        } else if (status !== "all") {
             query.status = status
+        }
+
+        if (search) {
+            query.$or = [
+                { title: { $regex: search, $options: "i" } },
+                { "uploader.username": { $regex: search, $options: "i" } }
+            ]
         }
 
         const [videos, total] = await Promise.all([

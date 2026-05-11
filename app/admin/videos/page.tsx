@@ -38,7 +38,7 @@ export default function AdminVideos() {
     const fetchVideos = async () => {
         setLoading(true)
         try {
-            const res = await fetch(`/api/admin/videos?status=${statusFilter}&page=${page}&limit=${limit}`)
+            const res = await fetch(`/api/admin/videos?status=${statusFilter}&page=${page}&limit=${limit}&search=${search}`)
             const data = await res.json()
             setVideos(data.videos || [])
             if (data.pagination) setPagination(data.pagination)
@@ -157,11 +157,18 @@ export default function AdminVideos() {
                     </div>
                     <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 scrollbar-none">
                     <Button
+                        variant={statusFilter === "all" ? "default" : "outline"}
+                        onClick={() => setStatusFilter("all")}
+                        size="sm"
+                    >
+                        All
+                    </Button>
+                    <Button
                         variant={statusFilter === "pending" ? "default" : "outline"}
                         onClick={() => setStatusFilter("pending")}
                         size="sm"
                     >
-                        Pending
+                        Pending/Ready
                     </Button>
                     <Button
                         variant={statusFilter === "processing" ? "default" : "outline"}
@@ -192,6 +199,15 @@ export default function AdminVideos() {
                     >
                         Highly Disliked
                     </Button>
+                <div className="relative flex-1 max-w-sm">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Search videos or users..."
+                        className="pl-8"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && fetchVideos()}
+                    />
                 </div>
             </div>
 
@@ -250,7 +266,10 @@ export default function AdminVideos() {
                                             className="w-16 h-10 object-cover rounded bg-muted"
                                         />
                                         <div className="w-48">
-                                            <p className="font-medium truncate">{video.title}</p>
+                                            <div className="flex items-center gap-2">
+                                                <p className="font-medium truncate">{video.title}</p>
+                                                {video.isShort && <Badge className="text-[8px] h-3 px-1 bg-orange-500 hover:bg-orange-600">SHORT</Badge>}
+                                            </div>
                                             <p className="text-xs text-muted-foreground">{new Date(video.createdAt).toLocaleDateString()}</p>
                                         </div>
                                     </div>
@@ -280,7 +299,7 @@ export default function AdminVideos() {
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex justify-end gap-1">
-                                        {(video.status === "pending" || video.status === "processing") && (
+                                        {(video.status === "pending" || video.status === "processing" || video.status === "ready") && (
                                             <>
                                                 <Button
                                                     variant="ghost"
