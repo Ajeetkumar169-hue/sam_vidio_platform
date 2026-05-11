@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter, JetBrains_Mono } from 'next/font/google'
 import { AuthProvider } from '@/lib/auth-context'
 import { InstallPwaDialog } from '@/components/install-pwa-dialog'
+import { SplashScreen } from '@/components/splash-screen'
 import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
 import Script from 'next/script'
@@ -52,6 +53,7 @@ export default function RootLayout({
           themes={["dark", "light", "white", "pink"]}
         >
           <AuthProvider>
+            <SplashScreen />
             <div className="relative flex min-h-screen flex-col overflow-x-hidden">
               {children}
             </div>
