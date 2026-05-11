@@ -59,9 +59,9 @@ export function InstallPwaDialog() {
     setIsVisible(false)
   }
 
-  const handleDismiss = (durationInHours: number = 24) => {
+  const handleDismiss = (durationInMinutes: number = 1440) => {
     setIsVisible(false)
-    const expiry = Date.now() + durationInHours * 60 * 60 * 1000
+    const expiry = Date.now() + durationInMinutes * 60 * 1000
     localStorage.setItem("pwa-prompt-dismissed", expiry.toString())
   }
 
@@ -78,7 +78,7 @@ export function InstallPwaDialog() {
         
         {/* Close Button (Cut) */}
         <button 
-          onClick={() => handleDismiss(48)} // Close/Cut suppresses for 48 hours
+          onClick={() => handleDismiss(2880)} // Close/Cut suppresses for 48 hours (2880 minutes)
           className="absolute top-5 right-5 h-8 w-8 rounded-full bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all z-20"
         >
           <X className="h-4 w-4" />
@@ -141,7 +141,7 @@ export function InstallPwaDialog() {
             </Button>
             
             <button 
-              onClick={() => handleDismiss(1)} // Later suppresses for only 1 hour
+              onClick={() => handleDismiss(2)} // Maybe Later suppresses for only 2 minutes
               className="w-full h-10 text-white/40 hover:text-white text-xs font-black uppercase tracking-[0.2em] transition-colors"
             >
               Maybe Later
