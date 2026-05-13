@@ -90,22 +90,52 @@ export function ShortsFeed() {
   }, [currentIndex, shorts])
 
   useEffect(() => {
-    fetch("/api/videos?isShort=true&limit=10")
+    fetch("/api/videos?isShort=true&limit=15")
       .then(res => res.json())
-      .then(data => {
+      .then(async (data) => {
         const videos = data.data.videos || []
         setShorts(videos)
         
-        // Initialize like status
+        // Initialize like status from basic data
         const status: Record<string, { liked: boolean, disliked: boolean, likes: number }> = {}
+        const subStatus: Record<string, boolean> = {}
+        
         videos.forEach((v: Short) => {
           status[v._id] = { liked: false, disliked: false, likes: v.likes }
         })
         setLikedStatus(status)
+
+        // If user is logged in, fetch real interaction status
+        if (user) {
+          const videoIds = videos.map((v: Short) => v._id)
+          const slugs = Array.from(new Set(videos.map((v: Short) => v.channel.slug)))
+          
+          // Fetch likes status in batch (or individually if no batch API)
+          for (const id of videoIds) {
+             fetch(`/api/videos/${id}/like`)
+               .then(res => res.json())
+               .then(data => {
+                  setLikedStatus(prev => ({
+                    ...prev,
+                    [id as string]: { ...prev[id as string], liked: data.liked, disliked: data.disliked }
+                  }))
+               }).catch(() => {})
+          }
+
+          // Fetch subscription status for channels
+          for (const slug of slugs) {
+             fetch(`/api/channels/${slug}/subscribe`)
+               .then(res => res.json())
+               .then(data => {
+                  setSubscribedStatus(prev => ({ ...prev, [slug as string]: data.subscribed }))
+               }).catch(() => {})
+          }
+        }
+        
         setLoading(false)
       })
       .catch(() => setLoading(false))
-  }, [])
+  }, [user])
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -138,13 +168,21 @@ export function ShortsFeed() {
     }
   }, [shorts.length])
 
+  const lastToggleTime = useRef(0)
   const handleScroll = () => {
     if (!containerRef.current) return
     const { scrollTop } = containerRef.current
-    if (scrollTop > lastScrollTop.current + 50) {
-        window.dispatchEvent(new CustomEvent("toggle-navs", { detail: true }))
-    } else if (scrollTop < lastScrollTop.current - 50) {
-        window.dispatchEvent(new CustomEvent("toggle-navs", { detail: false }))
+    const now = Date.now()
+
+    // Throttle the toggle-navs event to once every 200ms
+    if (now - lastToggleTime.current > 200) {
+        if (scrollTop > lastScrollTop.current + 100) {
+            window.dispatchEvent(new CustomEvent("toggle-navs", { detail: true }))
+            lastToggleTime.current = now
+        } else if (scrollTop < lastScrollTop.current - 100) {
+            window.dispatchEvent(new CustomEvent("toggle-navs", { detail: false }))
+            lastToggleTime.current = now
+        }
     }
     lastScrollTop.current = scrollTop
   }
@@ -311,59 +349,74 @@ export function ShortsFeed() {
     <div 
       ref={containerRef}
       onScroll={handleScroll}
-      onClick={showNavbars}
-      className="h-full w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar bg-background"
+      className="h-full w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar bg-[#050505]"
     >
       {shorts.map((short, index) => (
         <div 
           key={short._id} 
           data-index={index}
-          className="short-item h-full w-full snap-start snap-always relative flex items-center justify-center will-change-transform bg-black/90 lg:bg-background"
-          style={{ transform: 'translateZ(0)' }}
+          className="short-item h-full w-full snap-start snap-always relative flex items-center justify-center bg-black"
         >
-          {/* PC Blur Background */}
-          <div className="absolute inset-0 hidden lg:block overflow-hidden opacity-30 pointer-events-none">
-             <img src={short.videoUrl.replace(/\.[^/.]+$/, ".jpg")} className="w-full h-full object-cover blur-[100px] scale-150" alt="" />
+          {/* Optimized PC Background (Low GPU cost) */}
+          <div className="absolute inset-0 hidden lg:block overflow-hidden opacity-20 pointer-events-none">
+             <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-black to-black" />
           </div>
 
-          <div className="h-full w-full lg:h-[92vh] lg:max-w-[420px] lg:rounded-2xl relative bg-black overflow-hidden shadow-2xl border border-white/5">
+          <div className="h-full w-full lg:h-[95vh] lg:aspect-[9/16] lg:rounded-3xl relative bg-black overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/5">
             {/* Desktop Navigation Arrows */}
-            <div className="absolute left-full ml-4 bottom-20 hidden lg:flex flex-col gap-4 z-50">
-                <button onClick={scrollPrev} className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center text-white transition-all shadow-xl">
-                    <Zap className="h-6 w-6 rotate-180" />
+            <div className="absolute left-full ml-6 bottom-1/2 translate-y-1/2 hidden lg:flex flex-col gap-6 z-50">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); scrollPrev(); }} 
+                  className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary/20 backdrop-blur-xl flex items-center justify-center text-white transition-all shadow-2xl border border-white/10 hover:border-primary/50 group"
+                >
+                    <Zap className="h-6 w-6 rotate-180 group-hover:scale-125 transition-transform" />
                 </button>
-                <button onClick={scrollNext} className="h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center text-white transition-all shadow-xl">
-                    <Zap className="h-6 w-6" />
+                <button 
+                  onClick={(e) => { e.stopPropagation(); scrollNext(); }} 
+                  className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary/20 backdrop-blur-xl flex items-center justify-center text-white transition-all shadow-2xl border border-white/10 hover:border-primary/50 group"
+                >
+                    <Zap className="h-6 w-6 group-hover:scale-125 transition-transform" />
                 </button>
             </div>
+
             <ShortPlayer 
                 src={short.videoUrl} 
                 poster={short.videoUrl.replace(/\.[^/.]+$/, ".jpg")}
                 isActive={index === currentIndex} 
-                isNext={index === currentIndex + 1 || index === currentIndex + 2}
+                isNext={index === currentIndex + 1} // Reduced preloading for performance
             />
 
-            {/* UI Overlay */}
-            <div className="absolute inset-0 flex flex-col justify-end p-4 bg-gradient-to-t from-black/60 via-transparent to-transparent">
+            {/* UI Overlay - Using pointer-events-none on parent, auto on children */}
+            <div className="absolute inset-0 flex flex-col justify-end p-4 pb-8 md:p-6 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none">
               
-              <div className="flex flex-row justify-between items-end gap-4">
+              <div className="flex flex-row justify-between items-end gap-4 pointer-events-auto">
                 {/* Info & Actions */}
                 <div className="flex-1 pb-4 text-left flex flex-col items-start gap-4">
                    <div className="flex items-center justify-start gap-2 mb-1">
-                      <Link href={`/channel/${short.channel.slug}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                        <div className="h-9 w-9 rounded-full bg-primary overflow-hidden border border-white/20">
+                      <Link 
+                        href={`/channel/${short.channel.slug}`} 
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-2 hover:opacity-80 transition-all active:scale-95 z-50"
+                      >
+                        <div className="h-10 w-10 rounded-full bg-primary overflow-hidden border-2 border-white/20 shadow-lg">
                             {short.channel.logo ? <img src={short.channel.logo} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full flex items-center justify-center font-bold text-sm bg-secondary">{short.channel.name[0]}</div>}
                         </div>
-                        <p className="font-bold text-white text-sm">@{short.channel.slug}</p>
+                        <div className="flex flex-col">
+                           <p className="font-black text-white text-sm shadow-sm">@{short.channel.slug}</p>
+                           <p className="text-[10px] text-white/60 font-bold uppercase tracking-wider">{short.channel.name}</p>
+                        </div>
                       </Link>
                       <Button 
                         size="sm" 
-                        onClick={() => handleSubscribe(short.channel.slug)}
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            handleSubscribe(short.channel.slug)
+                        }}
                         className={cn(
-                            "h-8 rounded-full font-bold px-4 ml-2 transition-all",
+                            "h-9 rounded-full font-black px-6 ml-4 transition-all active:scale-90 shadow-xl z-50 uppercase tracking-widest text-[10px]",
                             subscribedStatus[short.channel.slug] 
-                                ? "bg-secondary text-foreground hover:bg-secondary/80" 
-                                : "bg-white text-black hover:bg-white/90"
+                                ? "bg-white/20 text-white backdrop-blur-md hover:bg-white/30 border border-white/10" 
+                                : "bg-primary text-white hover:bg-primary/90 shadow-primary/20"
                         )}
                       >
                         {subscribedStatus[short.channel.slug] ? "Subscribed" : "Subscribe"}
@@ -372,7 +425,7 @@ export function ShortsFeed() {
                    
                    <div className="space-y-2 flex flex-col items-start w-full">
                       <div className="flex items-center gap-2 max-w-full">
-                          <h3 className="font-medium text-white text-base leading-snug truncate mb-1">
+                          <h3 className="font-bold text-white text-lg leading-tight truncate mb-1 drop-shadow-md">
                               {short.title}
                           </h3>
                           {short.description && (
@@ -381,14 +434,14 @@ export function ShortsFeed() {
                                     e.stopPropagation()
                                     setExpandedId(expandedId === short._id ? null : short._id)
                                 }}
-                                className="text-[10px] font-bold text-white/70 hover:text-white uppercase tracking-widest bg-white/10 px-2 py-0.5 rounded shrink-0"
+                                className="text-[9px] font-black text-white/90 hover:text-white uppercase tracking-widest bg-white/20 backdrop-blur-md px-2.5 py-1 rounded-lg shrink-0 border border-white/10"
                               >
-                                  {expandedId === short._id ? "Less" : "More"}
+                                  {expandedId === short._id ? "LESS" : "MORE"}
                               </button>
                           )}
                       </div>
                       {expandedId === short._id && short.description && (
-                          <div className="text-xs text-white/90 bg-black/60 p-3 rounded-2xl backdrop-blur-md mb-2 max-h-32 overflow-y-auto w-[90%] border border-white/10 shadow-2xl">
+                          <div className="text-xs text-white/90 bg-black/80 p-4 rounded-2xl backdrop-blur-xl mb-2 max-h-40 overflow-y-auto w-[95%] border border-white/10 shadow-2xl animate-in slide-in-from-bottom-2 duration-300">
                               {short.description}
                           </div>
                       )}
@@ -396,87 +449,103 @@ export function ShortsFeed() {
                 </div>
 
                 {/* Right Actions Sidebar */}
-                <div className="flex flex-col gap-5 items-center mb-4 pr-3">
+                <div className="flex flex-col gap-6 items-center mb-4 pr-1">
                     {/* Like */}
-                    <div className="flex flex-col items-center gap-1">
+                    <div className="flex flex-col items-center gap-1.5 group">
                         <button 
-                          onClick={() => handleLike(short._id)}
+                          onClick={(e) => {
+                             e.stopPropagation()
+                             handleLike(short._id)
+                          }}
                           className={cn(
-                            "h-10 w-10 rounded-full backdrop-blur-md flex items-center justify-center transition-colors",
-                            likedStatus[short._id]?.liked ? "bg-primary text-white" : "bg-white/10 text-white hover:bg-white/20"
+                            "h-12 w-12 rounded-full backdrop-blur-xl flex items-center justify-center transition-all active:scale-75 shadow-xl border border-white/10",
+                            likedStatus[short._id]?.liked ? "bg-primary text-white border-primary" : "bg-white/10 text-white hover:bg-white/20"
                           )}
                         >
-                            <ThumbsUp className={cn("h-5 w-5", likedStatus[short._id]?.liked && "fill-current")} />
+                            <ThumbsUp className={cn("h-6 w-6 transition-transform group-hover:scale-110", likedStatus[short._id]?.liked && "fill-current")} />
                         </button>
-                        <span className="text-[10px] font-bold text-white">{formatNumber(likedStatus[short._id]?.likes || short.likes)}</span>
+                        <span className="text-[11px] font-black text-white drop-shadow-lg">{formatNumber(likedStatus[short._id]?.likes || short.likes)}</span>
                     </div>
 
                     {/* Dislike */}
-                    <div className="flex flex-col items-center gap-1">
+                    <div className="flex flex-col items-center gap-1.5 group">
                         <button 
-                          onClick={() => handleDislike(short._id)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDislike(short._id)
+                          }}
                           className={cn(
-                            "h-10 w-10 rounded-full backdrop-blur-md flex items-center justify-center transition-colors",
-                            likedStatus[short._id]?.disliked ? "bg-destructive text-white" : "bg-white/10 text-white hover:bg-white/20"
+                            "h-12 w-12 rounded-full backdrop-blur-xl flex items-center justify-center transition-all active:scale-75 shadow-xl border border-white/10",
+                            likedStatus[short._id]?.disliked ? "bg-white text-black border-white" : "bg-white/10 text-white hover:bg-white/20"
                           )}
                         >
-                            <ThumbsUp className={cn("h-5 w-5 rotate-180", likedStatus[short._id]?.disliked && "fill-current")} />
+                            <ThumbsUp className={cn("h-6 w-6 rotate-180 transition-transform group-hover:scale-110", likedStatus[short._id]?.disliked && "fill-current")} />
                         </button>
-                        <span className="text-[10px] font-bold text-white uppercase tracking-tighter">Dislike</span>
+                        <span className="text-[10px] font-black text-white/80 uppercase tracking-tighter drop-shadow-lg">Dislike</span>
                     </div>
 
                     {/* Delete (Only for Owner/Admin) */}
                     {(user?.id === short.uploader || user?.role === "admin") && (
-                      <div className="flex flex-col items-center gap-1">
+                      <div className="flex flex-col items-center gap-1.5 group">
                           <button 
-                            onClick={() => handleDelete(short._id)}
-                            className="h-10 w-10 rounded-full bg-destructive/10 backdrop-blur-md flex items-center justify-center text-destructive hover:bg-destructive/20 transition-colors"
+                            onClick={(e) => {
+                               e.stopPropagation()
+                               handleDelete(short._id)
+                            }}
+                            className="h-12 w-12 rounded-full bg-destructive/20 backdrop-blur-xl flex items-center justify-center text-destructive hover:bg-destructive/40 transition-all active:scale-75 border border-destructive/20 shadow-xl"
                           >
-                              <Trash2 className="h-5 w-5" />
+                              <Trash2 className="h-6 w-6" />
                           </button>
-                          <span className="text-[10px] font-bold text-destructive uppercase tracking-tighter">Delete</span>
+                          <span className="text-[10px] font-black text-destructive/80 uppercase tracking-tighter drop-shadow-lg">Delete</span>
                       </div>
                     )}
 
                     {/* Comments */}
-                    <div className="flex flex-col items-center gap-1">
+                    <div className="flex flex-col items-center gap-1.5 group">
                         <button 
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation()
                             setCommentShortId(short._id)
                             setCommentOpen(true)
                           }}
-                          className="h-10 w-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors"
+                          className="h-12 w-12 rounded-full bg-white/10 backdrop-blur-xl flex items-center justify-center hover:bg-white/20 transition-all active:scale-75 shadow-xl border border-white/10"
                         >
-                            <MessageSquare className="h-5 w-5 text-white" />
+                            <MessageSquare className="h-6 w-6 text-white group-hover:scale-110 transition-transform" />
                         </button>
-                        <span className="text-[10px] font-bold text-white">Comments</span>
+                        <span className="text-[10px] font-black text-white/80 uppercase tracking-tighter drop-shadow-lg">Chat</span>
                     </div>
 
                     {/* Share */}
-                    <div className="flex flex-col items-center gap-1">
+                    <div className="flex flex-col items-center gap-1.5 group">
                         <ShareDialog 
                           videoId={short._id} 
                           title={short.title} 
                           trigger={
-                            <button className="h-10 w-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors">
-                                <Share2 className="h-5 w-5 text-white" />
+                            <button 
+                              onClick={(e) => e.stopPropagation()}
+                              className="h-12 w-12 rounded-full bg-white/10 backdrop-blur-xl flex items-center justify-center hover:bg-white/20 transition-all active:scale-75 shadow-xl border border-white/10"
+                            >
+                                <Share2 className="h-6 w-6 text-white group-hover:scale-110 transition-transform" />
                             </button>
                           }
                         />
-                        <span className="text-[10px] font-bold text-white uppercase tracking-tighter">Share</span>
+                        <span className="text-[10px] font-black text-white/80 uppercase tracking-tighter drop-shadow-lg">Share</span>
                     </div>
 
                     {/* Download */}
-                    <div className="flex flex-col items-center gap-1">
+                    <div className="flex flex-col items-center gap-1.5 group">
                         <DownloadButton 
                           video={short as any} 
                           trigger={
-                            <button className="h-10 w-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors">
-                                <DownloadCloud className="h-5 w-5 text-white" />
+                            <button 
+                                onClick={(e) => e.stopPropagation()}
+                                className="h-12 w-12 rounded-full bg-white/10 backdrop-blur-xl flex items-center justify-center hover:bg-white/20 transition-all active:scale-75 shadow-xl border border-white/10"
+                            >
+                                <DownloadCloud className="h-6 w-6 text-white group-hover:scale-110 transition-transform" />
                             </button>
                           }
                         />
-                        <span className="text-[10px] font-bold text-white uppercase tracking-tighter">Save</span>
+                        <span className="text-[10px] font-black text-white/80 uppercase tracking-tighter drop-shadow-lg">Save</span>
                     </div>
                 </div>
               </div>
@@ -488,19 +557,19 @@ export function ShortsFeed() {
 
       {/* Real-time Comments Drawer */}
       <Drawer open={commentOpen} onOpenChange={setCommentOpen}>
-        <DrawerContent className="max-h-[80vh] bg-background border-t border-white/10">
-          <DrawerHeader className="border-b border-white/5 pb-2">
-            <DrawerTitle>Comments</DrawerTitle>
-            <DrawerDescription>View and post comments on this short</DrawerDescription>
+        <DrawerContent className="max-h-[80vh] bg-[#0A0A0A] border-t border-white/10 text-white rounded-t-[2.5rem]">
+          <DrawerHeader className="border-b border-white/5 pb-4">
+            <DrawerTitle className="text-xl font-black italic uppercase tracking-tight">Community Chat</DrawerTitle>
+            <DrawerDescription className="text-white/40 font-bold uppercase text-[10px] tracking-widest">Join the conversation about this short</DrawerDescription>
           </DrawerHeader>
-          <div className="p-4 overflow-y-auto">
+          <div className="p-4 overflow-y-auto platinum-scrollbar">
             {commentShortId && (
               <CommentsSection videoId={commentShortId} />
             )}
           </div>
-          <DrawerFooter className="pt-0">
+          <DrawerFooter className="pt-2 border-t border-white/5">
             <DrawerClose asChild>
-              <Button variant="outline">Close</Button>
+              <Button variant="ghost" className="rounded-2xl h-12 font-bold hover:bg-white/5">Close Discussion</Button>
             </DrawerClose>
           </DrawerFooter>
         </DrawerContent>
@@ -509,14 +578,17 @@ export function ShortsFeed() {
   )
 }
 
-function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: string, isActive: boolean, isNext?: boolean }) {
+import { memo } from "react"
+
+const ShortPlayer = memo(function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: string, isActive: boolean, isNext?: boolean }) {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const [isMuted, setIsMuted] = useState(false) // Unmuted by default
+  const [isMuted, setIsMuted] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const [showIcon, setShowIcon] = useState<"play" | "pause" | "volume" | "mute" | null>(null)
   const iconTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [hasError, setHasError] = useState(false)
   const [needsInteraction, setNeedsInteraction] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   const isStreamtape = src.includes("streamtape.com/")
   let embedUrl = src
@@ -528,13 +600,42 @@ function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: 
   }
 
   useEffect(() => {
-    if (isStreamtape) return // Handled by iframe
+    const checkCache = async () => {
+      if (isStreamtape || !src || !videoRef.current) return
+      
+      try {
+        const cache = await caches.open("video-downloads-v1")
+        const cachedResponse = await cache.match(src)
+        if (cachedResponse) {
+          const blob = await cachedResponse.blob()
+          const objectUrl = URL.createObjectURL(blob)
+          if (videoRef.current) {
+            videoRef.current.src = objectUrl
+          }
+          return () => URL.revokeObjectURL(objectUrl)
+        }
+      } catch (e) {
+        console.error("Cache check failed in Shorts:", e)
+      }
+    }
+    checkCache()
+  }, [src, isStreamtape])
+
+  useEffect(() => {
+    if (isStreamtape) return
     if (!src || !videoRef.current) return
     
-    // Only load if active or next (preloading)
-    if (!isActive && !isNext) return
+    if (!isActive && !isNext) {
+        if (videoRef.current.src) {
+            videoRef.current.src = ""
+            videoRef.current.load()
+        }
+        return
+    }
 
     const video = videoRef.current
+    if (video.src.startsWith("blob:")) return
+
     const isHLS = src.includes(".m3u8")
 
     if (isHLS) {
@@ -542,12 +643,10 @@ function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: 
         const hls = new Hls({
             enableWorker: true,
             lowLatencyMode: true,
-            backBufferLength: 90,
-            maxBufferLength: 20, // Smaller buffer for faster switching
-            maxMaxBufferLength: 40,
-            appendErrorMaxRetry: 5,
-            nudgeOffset: 0.1,
-            nudgeMaxRetry: 5,
+            backBufferLength: 30,
+            maxBufferLength: 10,
+            maxMaxBufferLength: 20,
+            autoStartLoad: isActive,
         })
         hls.loadSource(src)
         hls.attachMedia(video)
@@ -555,16 +654,9 @@ function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: 
         hls.on(Hls.Events.ERROR, (event, data) => {
             if (data.fatal) {
                 switch (data.type) {
-                    case Hls.ErrorTypes.NETWORK_ERROR:
-                        hls.startLoad()
-                        break
-                    case Hls.ErrorTypes.MEDIA_ERROR:
-                        hls.recoverMediaError()
-                        break
-                    default:
-                        hls.destroy()
-                        setHasError(true)
-                        break
+                    case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break
+                    case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break
+                    default: hls.destroy(); setHasError(true); break
                 }
             }
         })
@@ -583,39 +675,23 @@ function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: 
     const video = videoRef.current
     if (!video) return
 
-    let retryTimer: any
-
     if (isActive) {
       setHasError(false)
       video.muted = isMuted
-      const playPromise = video.play()
-      if (playPromise !== undefined) {
-        playPromise.catch((error) => {
-          console.log("Autoplay blocked, muting:", error)
+      video.play().catch(() => {
           video.muted = true
           setIsMuted(true)
           setNeedsInteraction(true)
           video.play().catch(() => {})
-        })
-      }
-
-      // Fallback: If still paused after 1s, try play again
-      retryTimer = setTimeout(() => {
-        if (isActive && video.paused && !needsInteraction) {
-            video.play().catch(() => {})
-        }
-      }, 1500)
+      })
     } else {
       video.pause()
       video.currentTime = 0
     }
-
-    return () => {
-        if (retryTimer) clearTimeout(retryTimer)
-    }
   }, [isActive, isStreamtape, isMuted, needsInteraction])
 
-  const handleInteraction = () => {
+  const handleInteraction = (e: React.MouseEvent) => {
+    e.stopPropagation()
     const video = videoRef.current
     if (!video) return
 
@@ -637,73 +713,58 @@ function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: 
     iconTimeoutRef.current = setTimeout(() => setShowIcon(null), 800)
   }
 
-  useEffect(() => {
-    return () => {
-        if (iconTimeoutRef.current) clearTimeout(iconTimeoutRef.current)
-    }
-  }, [])
-
-  if (isStreamtape) {
-    return (
-      <div className="h-full w-full relative">
-        <iframe
-            src={embedUrl}
-            className="h-full w-full border-none"
-            allow="autoplay; fullscreen"
-            allowFullScreen
-        />
-        <div className="absolute inset-0 z-10 bg-transparent" />
-      </div>
-    )
-  }
-
   return (
-    <div className="relative h-full w-full group cursor-pointer bg-black" onClick={handleInteraction}>
+    <div className="relative h-full w-full group cursor-pointer bg-black overflow-hidden" onClick={handleInteraction}>
         {hasError ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center">
-                <Zap className="h-10 w-10 text-destructive animate-pulse" />
-                <p className="text-white font-bold text-sm">Failed to load video</p>
-                <Button variant="secondary" size="sm" onClick={() => window.location.reload()}>Retry</Button>
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center z-20">
+                <Zap className="h-12 w-12 text-primary animate-pulse" />
+                <h3 className="text-white font-black italic uppercase">Playback Error</h3>
+                <Button variant="secondary" className="rounded-2xl font-bold" onClick={() => window.location.reload()}>Retry</Button>
             </div>
         ) : (
             <>
                 <video
                   ref={videoRef}
-                  className="h-full w-full object-contain"
+                  className="h-full w-full object-contain md:object-cover"
                   poster={poster}
                   loop
                   playsInline
                   autoPlay={isActive}
                   muted={true}
-                  preload="auto"
+                  preload="metadata"
+                  onLoadStart={() => setIsLoading(true)}
+                  onCanPlay={() => setIsLoading(false)}
                   onError={() => setHasError(true)}
                 />
-                {/* Click Overlay */}
+                
+                {isLoading && isActive && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-10">
+                        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                    </div>
+                )}
+
                 <div 
-                    className="absolute inset-0 z-10" 
-                    onClick={(e) => {
-                        e.stopPropagation()
-                        handleInteraction()
-                    }} 
+                    className="absolute inset-0 z-[5]" 
+                    onClick={handleInteraction} 
                 />
             </>
         )}
         
         {showIcon && (
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/40 p-6 rounded-full animate-out fade-out zoom-out duration-1000 pointer-events-none z-50">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/40 backdrop-blur-xl p-8 rounded-full animate-out fade-out zoom-out duration-700 pointer-events-none z-50 shadow-2xl border border-white/10">
                 {showIcon === "play" ? (
-                    <Play className="h-10 w-10 text-white fill-current" />
+                    <Play className="h-12 w-12 text-white fill-current" />
                 ) : (
-                    <Pause className="h-10 w-10 text-white fill-current" />
+                    <Pause className="h-12 w-12 text-white fill-current" />
                 )}
             </div>
         )}
 
         {needsInteraction && isActive && (
-            <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
+            <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40 backdrop-blur-md">
                 <Button 
-                    variant="secondary" 
-                    className="rounded-full font-bold shadow-2xl animate-bounce"
+                    variant="default" 
+                    className="rounded-full font-black h-16 px-8 shadow-2xl shadow-primary/40 animate-bounce bg-primary text-white uppercase italic tracking-wider border-none"
                     onClick={(e) => {
                         e.stopPropagation()
                         const video = videoRef.current
@@ -715,14 +776,14 @@ function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: 
                         }
                     }}
                 >
-                    <Play className="h-4 w-4 mr-2 fill-current" />
-                    Tap to Play with Sound
+                    <Play className="h-6 w-6 mr-3 fill-current" />
+                    Unmute & Play
                 </Button>
             </div>
         )}
     </div>
   )
-}
+})
 
 function formatNumber(n: number): string {
     if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`

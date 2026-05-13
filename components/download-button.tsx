@@ -91,6 +91,7 @@ export function DownloadButton({ video, className, trigger }: DownloadButtonProp
         createdAt: video.createdAt,
         duration: video.duration,
         channel: video.channel,
+        isShort: video.isShort || !!video.videoUrl.includes("isShort=true"), // Fallback check
         downloadedAt: Date.now(),
         isOfflineReady: true
       }
@@ -104,7 +105,7 @@ export function DownloadButton({ video, className, trigger }: DownloadButtonProp
       const filename = sanitizeFilename(video.title, video._id)
       const link = document.body.appendChild(document.createElement("a"))
       link.href = video.videoUrl
-      link.download = filename
+      link.setAttribute("download", filename) // Better attribute handling
       link.click()
       document.body.removeChild(link)
       
