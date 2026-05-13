@@ -46,7 +46,7 @@ export function ShortsFeed() {
   const [commentShortId, setCommentShortId] = useState<string | null>(null)
   const [subscribedStatus, setSubscribedStatus] = useState<Record<string, boolean>>({})
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [isMuted, setIsMuted] = useState(true)
+  const [isMuted, setIsMuted] = useState(false)
   const lastScrollTop = useRef(0)
   const containerRef = useRef<HTMLDivElement>(null)
   const hideTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -465,11 +465,19 @@ const ShortPlayer = memo(function ShortPlayer({ src, poster, isActive, isNext, i
     video.muted = isMuted
     if (isActive) {
       setHasError(false)
+      video.muted = isMuted
       const playPromise = video.play()
       if (playPromise !== undefined) {
-        playPromise.catch(() => {
+        playPromise.then(() => {
+          setIsPlaying(true)
+          setIsLoading(false)
+        }).catch(() => {
+          // If unmuted play fails (browser block), fallback to muted
           video.muted = true
-          video.play().catch(() => {})
+          video.play().then(() => {
+            setIsPlaying(true)
+            setIsLoading(false)
+          }).catch(() => {})
         })
       }
     } else {
@@ -505,7 +513,7 @@ const ShortPlayer = memo(function ShortPlayer({ src, poster, isActive, isNext, i
         <img 
           src={poster} 
           alt="" 
-          className="absolute inset-0 h-full w-full object-contain lg:object-cover z-0 transition-opacity duration-500"
+          className="absolute inset-0 h-full w-full object-contain lg:object-cover z-[5] transition-opacity duration-300"
         />
       )}
       

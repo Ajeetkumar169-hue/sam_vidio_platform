@@ -84,12 +84,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {!isSplashDone && <SplashScreen onComplete={handleSplashComplete} />}
       <AgeVerification />
       
-      {/* PWA Install Prompt - Higher Z-Index and positioned above mobile nav */}
-      <div className="fixed bottom-32 left-0 right-0 z-[10000] pointer-events-none flex justify-center">
-        <div className="pointer-events-auto w-full max-w-md px-4">
-           <InstallPwaDialog />
+      {/* PWA Install Prompt - Higher Z-Index and only on Home Page */}
+      {pathname === "/" && (
+        <div className="fixed bottom-32 left-0 right-0 z-[10000] pointer-events-none flex justify-center">
+          <div className="pointer-events-auto w-full max-w-md px-4">
+             <InstallPwaDialog />
+          </div>
         </div>
-      </div>
+      )}
       
       <div className={cn(
         "flex h-screen flex-col relative overflow-hidden bg-background transition-opacity duration-500",
