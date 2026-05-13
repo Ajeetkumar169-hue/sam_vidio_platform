@@ -40,18 +40,11 @@ export function SplashScreen({ onComplete }: { onComplete?: () => void }) {
       </div>
 
       <div className="relative flex flex-col items-center gap-10 md:gap-14 px-6 text-center">
-        {/* Logo Animation (Red SAM Logo) */}
-        <div className={`h-32 w-32 md:h-48 md:w-48 rounded-[32px] md:rounded-[48px] overflow-hidden shadow-[0_0_50px_rgba(220,38,38,0.3)] transition-all duration-1000 transform ${isAnimating ? 'scale-100 rotate-0 opacity-100' : 'scale-0 -rotate-12 opacity-0'}`}>
-           <div className="h-full w-full bg-black p-4 flex items-center justify-center">
-              <Image 
-                src="/logo.png" 
-                alt="SAM Logo" 
-                width={192} 
-                height={192} 
-                priority
-                className="w-full h-full object-contain" 
-              />
-           </div>
+        <div className={`flex flex-col items-center justify-center gap-2 transition-all duration-1000 transform ${isAnimating ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}`}>
+            <div className="h-24 w-24 md:h-32 md:w-32 rounded-3xl bg-black flex items-center justify-center p-4 shadow-2xl border border-white/10 mb-4 animate-active-bounce">
+                <img src="/logo.png" alt="SAM" className="h-full w-full object-contain" />
+            </div>
+            <span className="logo-text text-6xl md:text-8xl tracking-tighter" data-text="SAM">SAM</span>
         </div>
 
         {/* Text Animation */}

@@ -81,20 +81,12 @@ export function InstallPwaDialog() {
 
       <div className="relative z-10 flex flex-col gap-6">
         <div className="flex items-center gap-5">
-          <div className="relative h-20 w-20 shrink-0">
-             <div className="absolute inset-0 bg-red-600/30 blur-2xl rounded-full animate-pulse" />
-             <div className="relative h-full w-full rounded-3xl bg-gradient-to-br from-red-600 to-red-900 p-[2px] overflow-hidden shadow-2xl">
-               <div className="h-full w-full rounded-3xl bg-black flex items-center justify-center p-3">
-                 <Image 
-                   src="/logo.png" 
-                   alt="SAM Logo" 
-                   width={80} 
-                   height={80}
-                   className="w-full h-full object-contain"
-                 />
-               </div>
-             </div>
-          </div>
+              <div className="flex items-center gap-3">
+                <div className="h-14 w-14 rounded-2xl bg-black p-2 flex items-center justify-center border border-white/10 shadow-xl">
+                  <img src="/logo.png" alt="SAM" className="h-full w-full object-contain" />
+                </div>
+                <span className="logo-text text-3xl tracking-tighter" data-text="SAM">SAM</span>
+              </div>
           
           <div className="space-y-1">
             <div className="flex items-center gap-2">
