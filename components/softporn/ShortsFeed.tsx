@@ -282,7 +282,7 @@ export function ShortsFeed() {
             videoId={short._id} 
             title={short.title} 
             trigger={
-              <button onClick={(e) => e.stopPropagation()} className="h-12 w-12 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 border border-white/5 shadow-lg">
+              <button className="h-12 w-12 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-all border border-white/5 shadow-lg">
                 <Share2 className="h-6 w-6 text-white" />
               </button>
             } 
@@ -437,7 +437,15 @@ const ShortPlayer = memo(function ShortPlayer({ src, poster, isActive, isNext }:
     const isHLS = src.includes(".m3u8")
     if (isHLS) {
       if (Hls.isSupported()) {
-        const hls = new Hls({ enableWorker: true, lowLatencyMode: true, backBufferLength: 30, maxBufferLength: 10, maxMaxBufferLength: 20, autoStartLoad: isActive })
+        const hls = new Hls({ 
+          enableWorker: true, 
+          lowLatencyMode: true, 
+          backBufferLength: 30, 
+          maxBufferLength: 30, 
+          maxMaxBufferLength: 60, 
+          autoStartLoad: isActive || isNext,
+          appendErrorMaxRetry: 3
+        })
         hls.loadSource(src); hls.attachMedia(video)
         hls.on(Hls.Events.ERROR, (event, data) => {
           if (data.fatal) {
