@@ -309,19 +309,18 @@ export function ShortsFeed() {
   if (loading) return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
 
   return (
-    <div ref={containerRef} onScroll={handleScroll} className="h-full w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar bg-black">
+    <div ref={containerRef} onScroll={handleScroll} className="h-full w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar bg-black overscroll-none touch-pan-y">
       {shorts.map((short, index) => (
-        <div key={short._id} data-index={index} className="short-item h-full w-full snap-start snap-always relative flex items-center justify-center bg-black">
+        <div key={short._id} data-index={index} className="short-item h-full w-full snap-start snap-always relative flex items-center justify-center bg-black will-change-transform transform-gpu">
           {/* Desktop Background Glow */}
-          <div className="absolute inset-0 hidden lg:block opacity-30 bg-gradient-to-br from-primary/10 via-black to-black" />
+          <div className="absolute inset-0 hidden lg:block opacity-30 bg-gradient-to-br from-primary/10 via-black to-black pointer-events-none" />
           
-          <div className="h-full w-full lg:h-[92vh] lg:aspect-[9/16] lg:rounded-[2.5rem] relative bg-black overflow-hidden shadow-[0_0_100px_rgba(0,0,0,1)] border border-white/5 z-20">
+          <div className="h-full w-full lg:h-[92vh] lg:aspect-[9/16] lg:rounded-[2.5rem] relative bg-black overflow-hidden shadow-[0_0_100px_rgba(0,0,0,1)] border border-white/5 z-20 transform-gpu transition-all duration-500">
             <ShortPlayer src={short.videoUrl} poster={short.videoUrl.replace(/\.[^/.]+$/, ".jpg")} isActive={index === currentIndex} isNext={index === currentIndex + 1} />
             
             {/* Bottom Info Overlay */}
-            <div className="absolute inset-x-0 bottom-0 z-30 p-4 md:p-6 pb-12 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none">
+            <div className="absolute inset-x-0 bottom-0 z-30 p-4 md:p-6 pb-14 bg-gradient-to-t from-black/95 via-black/40 to-transparent pointer-events-none">
               <div className="flex flex-col gap-4 pointer-events-auto">
-                {/* Admin Row: DP + Name + Subscribe */}
                 <div className="flex items-center gap-3">
                   <Link href={`/channel/${short.channel.slug}`} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 group">
                     <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary overflow-hidden border-2 border-white/20 shadow-xl group-hover:scale-105 transition-transform">
@@ -341,7 +340,6 @@ export function ShortsFeed() {
                   </Button>
                 </div>
 
-                {/* Title and More Toggle */}
                 <div className="space-y-2 max-w-[90%]">
                   <div className="flex items-center gap-2">
                     <h3 className="font-bold text-white text-lg leading-tight truncate drop-shadow-md">{short.title}</h3>
@@ -364,13 +362,13 @@ export function ShortsFeed() {
             </div>
 
             {/* Mobile Actions Sidebar (Hidden on LG) */}
-            <div className="absolute right-2 bottom-32 flex lg:hidden flex-col gap-6 items-center z-40 pointer-events-auto">
+            <div className="absolute right-2 bottom-36 flex lg:hidden flex-col gap-6 items-center z-40 pointer-events-auto transition-transform">
               {renderSidebarActions(short)}
             </div>
           </div>
 
           {/* PC Actions Sidebar (Outside Frame) */}
-          <div className="hidden lg:flex flex-col gap-6 items-center absolute left-[calc(50%+max(30vh,300px))] bottom-10 z-50 animate-in fade-in slide-in-from-right-10 duration-700 delay-300">
+          <div className="hidden lg:flex flex-col gap-6 items-center absolute left-[calc(50%+max(30vh,300px))] bottom-10 z-50 animate-in fade-in slide-in-from-right-10 duration-700">
             {renderSidebarActions(short)}
           </div>
 
@@ -427,26 +425,34 @@ const ShortPlayer = memo(function ShortPlayer({ src, poster, isActive, isNext }:
 
   useEffect(() => {
     if (isStreamtape || !src || !videoRef.current) return
+    const video = videoRef.current
+    
+    // Clear video resource if not active or next to save memory
     if (!isActive && !isNext) {
-      if (videoRef.current.src) { videoRef.current.src = ""; videoRef.current.load() }
+      video.removeAttribute("src")
+      video.load()
       return
     }
-    const video = videoRef.current
+
     if (video.src.startsWith("blob:")) return
 
     const isHLS = src.includes(".m3u8")
     if (isHLS) {
-      if (Hls.isSupported()) {
+      // Prioritize Native HLS for mobile (Safari, and many Chrome-on-Android versions)
+      if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = src
+      } else if (Hls.isSupported()) {
         const hls = new Hls({ 
           enableWorker: true, 
           lowLatencyMode: true, 
           backBufferLength: 30, 
-          maxBufferLength: 30, 
-          maxMaxBufferLength: 60, 
+          maxBufferLength: 20, 
+          maxMaxBufferLength: 40, 
           autoStartLoad: isActive || isNext,
           appendErrorMaxRetry: 3
         })
-        hls.loadSource(src); hls.attachMedia(video)
+        hls.loadSource(src)
+        hls.attachMedia(video)
         hls.on(Hls.Events.ERROR, (event, data) => {
           if (data.fatal) {
             switch (data.type) {
@@ -457,8 +463,10 @@ const ShortPlayer = memo(function ShortPlayer({ src, poster, isActive, isNext }:
           }
         })
         return () => hls.destroy()
-      } else if (video.canPlayType("application/vnd.apple.mpegurl")) { video.src = src }
-    } else { video.src = src }
+      }
+    } else {
+      video.src = src
+    }
   }, [src, isStreamtape, isActive, isNext, retryCount])
 
   useEffect(() => {
@@ -468,16 +476,35 @@ const ShortPlayer = memo(function ShortPlayer({ src, poster, isActive, isNext }:
     if (isActive) {
       setHasError(false)
       video.muted = isMuted
-      video.play().catch(() => { video.muted = true; setIsMuted(true); setNeedsInteraction(true); video.play().catch(() => { }) })
-    } else { video.pause(); video.currentTime = 0 }
+      const playPromise = video.play()
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          video.muted = true
+          setIsMuted(true)
+          setNeedsInteraction(true)
+          video.play().catch(() => {})
+        })
+      }
+    } else {
+      video.pause()
+      video.currentTime = 0
+    }
   }, [isActive, isStreamtape, isMuted, needsInteraction, retryCount])
 
   const handleInteraction = (e: React.MouseEvent) => {
     e.stopPropagation()
     const video = videoRef.current
     if (!video) return
-    if (video.paused) { video.play().then(() => { setIsPaused(false); triggerIcon("play") }).catch(() => { }) }
-    else { video.pause(); setIsPaused(true); triggerIcon("pause") }
+    if (video.paused) {
+      video.play().then(() => {
+        setIsPaused(false)
+        triggerIcon("play")
+      }).catch(() => {})
+    } else {
+      video.pause()
+      setIsPaused(true)
+      triggerIcon("pause")
+    }
   }
 
   const triggerIcon = (type: "play" | "pause") => {
@@ -486,10 +513,14 @@ const ShortPlayer = memo(function ShortPlayer({ src, poster, isActive, isNext }:
     iconTimeoutRef.current = setTimeout(() => setShowIcon(null), 800)
   }
 
-  const handleRetry = () => { setHasError(false); setIsLoading(true); setRetryCount(prev => prev + 1) }
+  const handleRetry = () => {
+    setHasError(false)
+    setIsLoading(true)
+    setRetryCount(prev => prev + 1)
+  }
 
   return (
-    <div className="relative h-full w-full group cursor-pointer bg-black overflow-hidden" onClick={handleInteraction}>
+    <div className="relative h-full w-full group cursor-pointer bg-black overflow-hidden transform-gpu" onClick={handleInteraction}>
       {hasError ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 p-8 text-center z-[100] bg-black/80 backdrop-blur-2xl">
           <Zap className="h-12 w-12 text-primary animate-pulse" />
@@ -501,15 +532,48 @@ const ShortPlayer = memo(function ShortPlayer({ src, poster, isActive, isNext }:
         </div>
       ) : (
         <>
-          <video ref={videoRef} className="h-full w-full object-contain lg:object-cover" poster={poster} loop playsInline autoPlay={isActive} muted={true} preload="metadata" onLoadStart={() => setIsLoading(true)} onCanPlay={() => setIsLoading(false)} onError={() => { if (isActive) setHasError(true) }} />
-          {isLoading && isActive && <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm z-40 gap-4"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="text-[10px] font-black text-white/40 uppercase tracking-widest animate-pulse">Buffering</p></div>}
+          <video 
+            ref={videoRef} 
+            className="h-full w-full object-contain lg:object-cover transform-gpu" 
+            poster={poster} 
+            loop 
+            playsInline 
+            muted={true} 
+            preload="metadata" 
+            onLoadStart={() => setIsLoading(true)} 
+            onCanPlay={() => setIsLoading(false)} 
+            onError={() => { if (isActive) setHasError(true) }} 
+          />
+          {isLoading && isActive && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm z-40 gap-4">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest animate-pulse">Buffering</p>
+            </div>
+          )}
           <div className="absolute inset-0 z-10" onClick={handleInteraction} />
         </>
       )}
-      {showIcon && <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/40 backdrop-blur-3xl p-10 rounded-full animate-out fade-out zoom-out duration-1000 pointer-events-none z-50 shadow-2xl border border-white/10">{showIcon === "play" ? <Play className="h-16 w-16 text-white fill-current" /> : <Pause className="h-16 w-16 text-white fill-current" />}</div>}
+      {showIcon && (
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/40 backdrop-blur-3xl p-10 rounded-full animate-out fade-out zoom-out duration-1000 pointer-events-none z-50 shadow-2xl border border-white/10">
+          {showIcon === "play" ? <Play className="h-16 w-16 text-white fill-current" /> : <Pause className="h-16 w-16 text-white fill-current" />}
+        </div>
+      )}
       {needsInteraction && isActive && (
         <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-md animate-in fade-in duration-500">
-          <Button variant="default" className="rounded-full font-black h-20 px-10 animate-bounce bg-primary text-white uppercase italic tracking-widest" onClick={(e) => { e.stopPropagation(); const video = videoRef.current; if (video) { video.muted = false; setIsMuted(false); setNeedsInteraction(false); video.play().catch(() => { }) } }}>
+          <Button 
+            variant="default" 
+            className="rounded-full font-black h-20 px-10 animate-bounce bg-primary text-white uppercase italic tracking-widest" 
+            onClick={(e) => { 
+              e.stopPropagation()
+              const video = videoRef.current
+              if (video) { 
+                video.muted = false
+                setIsMuted(false)
+                setNeedsInteraction(false)
+                video.play().catch(() => {}) 
+              } 
+            }}
+          >
             <Play className="h-8 w-8 mr-4 fill-current" />Unmute & Enjoy
           </Button>
         </div>
