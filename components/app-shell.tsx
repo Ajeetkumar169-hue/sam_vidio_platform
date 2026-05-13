@@ -25,10 +25,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isShorts = pathname === "/softporn"
   
   useEffect(() => {
+    // Check if splash has already been shown in this session
+    const hasShown = sessionStorage.getItem("splash_shown")
+    if (hasShown) {
+      setIsSplashDone(true)
+    }
+
     const handleHide = (e: any) => setHideNavs(e.detail)
     window.addEventListener("toggle-navs", handleHide as any)
     return () => window.removeEventListener("toggle-navs", handleHide as any)
   }, [])
+
+  const handleSplashComplete = () => {
+    sessionStorage.setItem("splash_shown", "true")
+    setIsSplashDone(true)
+  }
   
   const openTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -70,7 +81,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {!isSplashDone && <SplashScreen onComplete={() => setIsSplashDone(true)} />}
+      {!isSplashDone && <SplashScreen onComplete={handleSplashComplete} />}
       <AgeVerification />
       
       {/* PWA Install Prompt - Higher Z-Index and positioned above mobile nav */}
