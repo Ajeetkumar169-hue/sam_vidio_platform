@@ -236,41 +236,72 @@ export function ShortsFeed() {
 
   function renderSidebarActions(short: Short) {
     return (
-      <div className="flex flex-col gap-6 items-center">
-        <div className="flex flex-col items-center gap-1.5 group">
-          <button onClick={(e) => { e.stopPropagation(); handleLike(short._id) }} className={cn("h-12 w-12 md:h-14 md:w-14 rounded-full bg-white/10 backdrop-blur-2xl flex items-center justify-center transition-all active:scale-75 shadow-2xl border border-white/10", likedStatus[short._id]?.liked ? "bg-primary text-white border-primary" : "hover:bg-white/20 text-white")}>
+      <div className="flex flex-col gap-5 items-center">
+        {/* Like */}
+        <div className="flex flex-col items-center gap-1 group cursor-pointer">
+          <button 
+            onClick={(e) => { e.stopPropagation(); handleLike(short._id) }} 
+            className={cn(
+              "h-12 w-12 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center transition-all active:scale-75 hover:bg-white/20 border border-white/5 shadow-lg",
+              likedStatus[short._id]?.liked ? "bg-primary text-white border-primary" : "text-white"
+            )}
+          >
             <ThumbsUp className={cn("h-6 w-6", likedStatus[short._id]?.liked && "fill-current")} />
           </button>
-          <span className="text-[11px] font-black text-white">{formatNumber(likedStatus[short._id]?.likes || short.likes)}</span>
+          <span className="text-[11px] font-bold text-white drop-shadow-md">{formatNumber(likedStatus[short._id]?.likes || short.likes)}</span>
         </div>
-        <div className="flex flex-col items-center gap-1.5 group">
-          <button onClick={(e) => { e.stopPropagation(); handleDislike(short._id) }} className={cn("h-12 w-12 md:h-14 md:w-14 rounded-full bg-white/10 backdrop-blur-2xl flex items-center justify-center transition-all active:scale-75 shadow-2xl border border-white/10", likedStatus[short._id]?.disliked ? "bg-white text-black border-white" : "hover:bg-white/20 text-white")}>
+
+        {/* Dislike */}
+        <div className="flex flex-col items-center gap-1 group cursor-pointer">
+          <button 
+            onClick={(e) => { e.stopPropagation(); handleDislike(short._id) }} 
+            className={cn(
+              "h-12 w-12 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center transition-all active:scale-75 hover:bg-white/20 border border-white/5 shadow-lg",
+              likedStatus[short._id]?.disliked ? "bg-white text-black border-white" : "text-white"
+            )}
+          >
             <ThumbsUp className="h-6 w-6 rotate-180" />
           </button>
-          <span className="text-[10px] font-black text-white/80 uppercase">Dislike</span>
+          <span className="text-[11px] font-bold text-white drop-shadow-md">Dislike</span>
         </div>
-        {(user?.id === short.uploader || user?.role === "admin") && (
-          <div className="flex flex-col items-center gap-1.5 group">
-            <button onClick={(e) => { e.stopPropagation(); handleDelete(short._id) }} className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-destructive/20 backdrop-blur-2xl flex items-center justify-center text-destructive border border-destructive/20 shadow-2xl">
-              <Trash2 className="h-6 w-6" />
-            </button>
-            <span className="text-[10px] font-black text-destructive/80 uppercase">Delete</span>
-          </div>
-        )}
-        <div className="flex flex-col items-center gap-1.5 group">
-          <button onClick={(e) => { e.stopPropagation(); setCommentShortId(short._id); setCommentOpen(true) }} className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-white/10 backdrop-blur-2xl flex items-center justify-center hover:bg-white/20 transition-all border border-white/10 shadow-2xl">
+
+        {/* Comments */}
+        <div className="flex flex-col items-center gap-1 group cursor-pointer">
+          <button 
+            onClick={(e) => { e.stopPropagation(); setCommentShortId(short._id); setCommentOpen(true) }} 
+            className="h-12 w-12 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-all border border-white/5 shadow-lg"
+          >
             <MessageSquare className="h-6 w-6 text-white" />
           </button>
-          <span className="text-[10px] font-black text-white/80 uppercase">Chat</span>
+          <span className="text-[11px] font-bold text-white drop-shadow-md">Chat</span>
         </div>
-        <div className="flex flex-col items-center gap-1.5 group">
-          <ShareDialog videoId={short._id} title={short.title} trigger={<button onClick={(e) => e.stopPropagation()} className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-white/10 backdrop-blur-2xl flex items-center justify-center hover:bg-white/20 border border-white/10 shadow-2xl"><Share2 className="h-6 w-6 text-white" /></button>} />
-          <span className="text-[10px] font-black text-white/80 uppercase">Share</span>
+
+        {/* Share */}
+        <div className="flex flex-col items-center gap-1 group cursor-pointer">
+          <ShareDialog 
+            videoId={short._id} 
+            title={short.title} 
+            trigger={
+              <button onClick={(e) => e.stopPropagation()} className="h-12 w-12 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 border border-white/5 shadow-lg">
+                <Share2 className="h-6 w-6 text-white" />
+              </button>
+            } 
+          />
+          <span className="text-[11px] font-bold text-white drop-shadow-md">Share</span>
         </div>
-        <div className="flex flex-col items-center gap-1.5 group">
-          <DownloadButton video={short as any} trigger={<button onClick={(e) => e.stopPropagation()} className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-white/10 backdrop-blur-2xl flex items-center justify-center hover:bg-white/20 border border-white/10 shadow-2xl"><DownloadCloud className="h-6 w-6 text-white" /></button>} />
-          <span className="text-[10px] font-black text-white/80 uppercase">Save</span>
-        </div>
+
+        {/* Delete (Only for Admin) */}
+        {(user?.id === short.uploader || user?.role === "admin") && (
+          <div className="flex flex-col items-center gap-1 group cursor-pointer">
+            <button 
+              onClick={(e) => { e.stopPropagation(); handleDelete(short._id) }} 
+              className="h-12 w-12 rounded-full bg-destructive/20 backdrop-blur-md flex items-center justify-center text-destructive border border-destructive/20 shadow-lg hover:bg-destructive/40"
+            >
+              <Trash2 className="h-6 w-6" />
+            </button>
+            <span className="text-[11px] font-bold text-destructive/80 drop-shadow-md">Delete</span>
+          </div>
+        )}
       </div>
     )
   }
@@ -278,44 +309,72 @@ export function ShortsFeed() {
   if (loading) return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
 
   return (
-    <div ref={containerRef} onScroll={handleScroll} className="h-full w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar bg-[#050505]">
+    <div ref={containerRef} onScroll={handleScroll} className="h-full w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar bg-black">
       {shorts.map((short, index) => (
         <div key={short._id} data-index={index} className="short-item h-full w-full snap-start snap-always relative flex items-center justify-center bg-black">
-          <div className="absolute inset-0 hidden lg:block overflow-hidden opacity-20 pointer-events-none bg-gradient-to-br from-primary/20 via-black to-black" />
-          <div className="h-full w-full lg:h-[92vh] lg:aspect-[9/16] lg:rounded-3xl relative bg-black overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.9)] border border-white/10 z-20">
+          {/* Desktop Background Glow */}
+          <div className="absolute inset-0 hidden lg:block opacity-30 bg-gradient-to-br from-primary/10 via-black to-black" />
+          
+          <div className="h-full w-full lg:h-[92vh] lg:aspect-[9/16] lg:rounded-[2.5rem] relative bg-black overflow-hidden shadow-[0_0_100px_rgba(0,0,0,1)] border border-white/5 z-20">
             <ShortPlayer src={short.videoUrl} poster={short.videoUrl.replace(/\.[^/.]+$/, ".jpg")} isActive={index === currentIndex} isNext={index === currentIndex + 1} />
-            <div className="absolute inset-0 z-30 pointer-events-none flex flex-col justify-end p-4 pb-10 md:p-6 bg-gradient-to-t from-black/90 via-transparent to-transparent">
-              <div className="flex-1 pb-4 text-left flex flex-col items-start gap-4 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center justify-start gap-2 mb-1">
-                  <Link href={`/channel/${short.channel.slug}`} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 hover:opacity-80 transition-all active:scale-95 group">
-                    <div className="h-10 w-10 rounded-full bg-primary overflow-hidden border-2 border-white/20 shadow-lg group-hover:border-primary/50">
+            
+            {/* Bottom Info Overlay */}
+            <div className="absolute inset-x-0 bottom-0 z-30 p-4 md:p-6 pb-12 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none">
+              <div className="flex flex-col gap-4 pointer-events-auto">
+                {/* Admin Row: DP + Name + Subscribe */}
+                <div className="flex items-center gap-3">
+                  <Link href={`/channel/${short.channel.slug}`} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 group">
+                    <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary overflow-hidden border-2 border-white/20 shadow-xl group-hover:scale-105 transition-transform">
                       {short.channel.logo ? <img src={short.channel.logo} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full flex items-center justify-center font-bold text-sm bg-secondary">{short.channel.name[0]}</div>}
                     </div>
-                    <div className="flex flex-col">
-                      <p className="font-black text-white text-sm shadow-sm">@{short.channel.slug}</p>
-                      <p className="text-[10px] text-white/60 font-bold uppercase tracking-wider">{short.channel.name}</p>
-                    </div>
+                    <span className="font-bold text-white text-base drop-shadow-lg tracking-tight">@{short.channel.slug}</span>
                   </Link>
-                  <Button size="sm" onClick={(e) => { e.stopPropagation(); handleSubscribe(short.channel.slug) }} className={cn("h-9 rounded-full font-black px-6 ml-4 transition-all active:scale-90 shadow-xl uppercase tracking-widest text-[10px]", subscribedStatus[short.channel.slug] ? "bg-white/10 text-white backdrop-blur-md hover:bg-white/20 border border-white/10" : "bg-primary text-white hover:bg-primary/90 shadow-primary/20")}>
-                    {subscribedStatus[short.channel.slug] ? "Joined" : "Join"}
+                  <Button 
+                    size="sm" 
+                    onClick={(e) => { e.stopPropagation(); handleSubscribe(short.channel.slug) }} 
+                    className={cn(
+                      "h-9 rounded-full font-black px-6 ml-2 uppercase text-[11px] tracking-widest shadow-xl transition-all active:scale-95",
+                      subscribedStatus[short.channel.slug] ? "bg-white/10 text-white backdrop-blur-md border border-white/10" : "bg-primary text-white hover:bg-primary/90"
+                    )}
+                  >
+                    {subscribedStatus[short.channel.slug] ? "Subscribed" : "Subscribe"}
                   </Button>
                 </div>
-                <div className="space-y-2 flex flex-col items-start w-full">
-                  <div className="flex items-center gap-3 max-w-full">
-                    <h3 className="font-bold text-white text-lg leading-tight truncate mb-1 drop-shadow-md">{short.title}</h3>
-                    {short.description && <button onClick={(e) => { e.stopPropagation(); setExpandedId(expandedId === short._id ? null : short._id) }} className="text-[9px] font-black text-white/90 hover:text-white uppercase tracking-widest bg-white/10 backdrop-blur-md px-3 py-1 rounded-lg shrink-0 border border-white/10">{expandedId === short._id ? "LESS" : "MORE"}</button>}
+
+                {/* Title and More Toggle */}
+                <div className="space-y-2 max-w-[90%]">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-white text-lg leading-tight truncate drop-shadow-md">{short.title}</h3>
+                    {short.description && (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setExpandedId(expandedId === short._id ? null : short._id) }}
+                        className="text-[10px] font-black text-white/60 hover:text-white uppercase tracking-widest transition-colors"
+                      >
+                        {expandedId === short._id ? "Less" : "...more"}
+                      </button>
+                    )}
                   </div>
-                  {expandedId === short._id && short.description && <div className="text-xs text-white/90 bg-black/80 p-4 rounded-2xl backdrop-blur-xl mb-2 max-h-40 overflow-y-auto w-full border border-white/10 shadow-2xl animate-in slide-in-from-bottom-2 duration-300">{short.description}</div>}
+                  {expandedId === short._id && short.description && (
+                    <div className="text-xs text-white/90 bg-black/80 p-4 rounded-2xl backdrop-blur-xl border border-white/10 shadow-2xl animate-in slide-in-from-bottom-2 duration-300 max-h-32 overflow-y-auto platinum-scrollbar">
+                      {short.description}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
+
+            {/* Mobile Actions Sidebar (Hidden on LG) */}
             <div className="absolute right-2 bottom-32 flex lg:hidden flex-col gap-6 items-center z-40 pointer-events-auto">
               {renderSidebarActions(short)}
             </div>
           </div>
+
+          {/* PC Actions Sidebar (Outside Frame) */}
           <div className="hidden lg:flex flex-col gap-6 items-center absolute left-[calc(50%+max(30vh,300px))] bottom-10 z-50 animate-in fade-in slide-in-from-right-10 duration-700 delay-300">
             {renderSidebarActions(short)}
           </div>
+
+          {/* Navigation Arrows */}
           <div className="fixed right-10 bottom-1/2 translate-y-1/2 hidden xl:flex flex-col gap-10 z-[60] pointer-events-auto">
             <button onClick={(e) => { e.stopPropagation(); scrollPrev(); }} className="h-16 w-16 rounded-full bg-white/5 hover:bg-primary/20 backdrop-blur-3xl flex items-center justify-center text-white transition-all shadow-2xl border border-white/10 hover:border-primary/50 group"><Zap className="h-8 w-8 rotate-180 group-hover:scale-125 transition-transform" /></button>
             <button onClick={(e) => { e.stopPropagation(); scrollNext(); }} className="h-16 w-16 rounded-full bg-white/5 hover:bg-primary/20 backdrop-blur-3xl flex items-center justify-center text-white transition-all shadow-2xl border border-white/10 hover:border-primary/50 group"><Zap className="h-8 w-8 group-hover:scale-125 transition-transform" /></button>
@@ -323,7 +382,7 @@ export function ShortsFeed() {
         </div>
       ))}
       <Drawer open={commentOpen} onOpenChange={setCommentOpen}>
-        <DrawerContent className="max-h-[80vh] bg-[#0A0A0A] border-t border-white/10 text-white rounded-t-[2.5rem]">
+        <DrawerContent className="max-h-[80vh] bg-black border-t border-white/10 text-white rounded-t-[2.5rem]">
           <DrawerHeader className="border-b border-white/5 pb-4">
             <DrawerTitle className="text-xl font-black italic uppercase tracking-tight">Community Chat</DrawerTitle>
             <DrawerDescription className="text-white/40 font-bold uppercase text-[10px] tracking-widest">Join the conversation about this short</DrawerDescription>
