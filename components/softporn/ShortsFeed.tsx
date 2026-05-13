@@ -51,6 +51,7 @@ export function ShortsFeed() {
   const containerRef = useRef<HTMLDivElement>(null)
   const hideTimerRef = useRef<NodeJS.Timeout | null>(null)
   const viewedShorts = useRef<Set<string>>(new Set())
+  const [isMuted, setIsMuted] = useState(true)
 
   const showNavbars = useCallback(() => {
     window.dispatchEvent(new CustomEvent("toggle-navs", { detail: false }))
@@ -128,7 +129,7 @@ export function ShortsFeed() {
           }
         })
       },
-      { threshold: 0.1, rootMargin: "200px" }
+      { threshold: 0.1, rootMargin: "300px" }
     )
     const timer = setTimeout(() => {
       const elements = document.querySelectorAll(".short-item")
@@ -485,10 +486,11 @@ const ShortPlayer = memo(function ShortPlayer({ src, poster, isActive, isNext, i
     if (!video) return
     
     if (video.paused) {
-      video.play().then(() => { triggerIcon("play") }).catch(() => {})
+      video.play().then(() => { setIsPlaying(true); triggerIcon("play") }).catch(() => {})
     } else {
-      onMuteToggle()
-      triggerIcon(isMuted ? "volume" : "mute")
+      video.pause()
+      setIsPlaying(false)
+      triggerIcon("pause")
     }
   }
 
@@ -532,6 +534,15 @@ const ShortPlayer = memo(function ShortPlayer({ src, poster, isActive, isNext, i
               <Loader2 className="h-10 w-10 animate-spin text-primary shadow-2xl" />
             </div>
           )}
+          {/* Dedicated Volume Toggle */}
+          <div className="absolute right-4 bottom-4 z-50 pointer-events-auto">
+            <button 
+              onClick={(e) => { e.stopPropagation(); onMuteToggle(); triggerIcon(isMuted ? "volume" : "mute") }}
+              className="h-12 w-12 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center text-white border border-white/10 hover:bg-black/60 transition-all active:scale-90"
+            >
+              {isMuted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
+            </button>
+          </div>
           <div className="absolute inset-0 z-10" />
         </>
       )}
