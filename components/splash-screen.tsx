@@ -40,11 +40,8 @@ export function SplashScreen({ onComplete }: { onComplete?: () => void }) {
       </div>
 
       <div className="relative flex flex-col items-center gap-10 md:gap-14 px-6 text-center">
-        <div className={`flex flex-col items-center justify-center gap-2 transition-all duration-1000 transform ${isAnimating ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}`}>
-            <div className="h-24 w-24 md:h-32 md:w-32 rounded-3xl bg-black flex items-center justify-center p-4 shadow-2xl border border-white/10 mb-4 animate-active-bounce">
-                <img src="/logo.png" alt="SAM" className="h-full w-full object-contain" />
-            </div>
-            <span className="logo-text text-6xl md:text-8xl tracking-tighter" data-text="SAM">SAM</span>
+        <div className={`flex flex-col items-center justify-center transition-all duration-1000 transform ${isAnimating ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}`}>
+            <span className="logo-text text-8xl md:text-[12rem] tracking-tighter" data-text="SAM">SAM</span>
         </div>
 
         {/* Text Animation */}

@@ -159,12 +159,9 @@ export function Header({ onMenuClick }: HeaderProps) {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-foreground/5 bg-background/60 px-6 backdrop-blur-md luxury-easing mobile-nav-gpu">
       {/* Left: Logo */}
-      <div className="flex items-center gap-4 md:w-1/4">
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="h-10 w-10 md:h-12 md:w-12 overflow-hidden rounded-xl bg-black flex items-center justify-center p-1.5 transition-transform group-hover:scale-105 active:scale-95 shadow-xl shadow-primary/10 border border-white/5">
-            <img src="/logo.png" alt="SAM" className="h-full w-full object-contain" />
-          </div>
-          <span className="logo-text text-xl md:text-2xl tracking-tighter hidden sm:block" data-text="SAM">SAM</span>
+      <div className="flex items-center md:w-1/4">
+        <Link href="/" className="flex items-center group">
+          <span className="logo-text text-2xl md:text-3xl tracking-tighter" data-text="SAM">SAM</span>
         </Link>
       </div>
 
