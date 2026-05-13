@@ -1,12 +1,11 @@
 "use client"
 
 import { useState, useEffect, useRef, memo, useCallback } from "react"
-import { ThumbsUp, MessageSquare, Share2, Loader2, Zap, Trash2, DownloadCloud, Play, Pause } from "lucide-react"
+import { ThumbsUp, MessageSquare, Share2, Loader2, Zap, Trash2, Play, Pause, Volume2, VolumeX } from "lucide-react"
 import Hls from "hls.js"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { ShareDialog } from "@/components/share-dialog"
-import { DownloadButton } from "@/components/download-button"
 import {
   Drawer,
   DrawerClose,
@@ -47,6 +46,7 @@ export function ShortsFeed() {
   const [commentShortId, setCommentShortId] = useState<string | null>(null)
   const [subscribedStatus, setSubscribedStatus] = useState<Record<string, boolean>>({})
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [isMuted, setIsMuted] = useState(true)
   const lastScrollTop = useRef(0)
   const containerRef = useRef<HTMLDivElement>(null)
   const hideTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -128,7 +128,7 @@ export function ShortsFeed() {
           }
         })
       },
-      { threshold: 0.5, rootMargin: "100px" }
+      { threshold: 0.1, rootMargin: "200px" }
     )
     const timer = setTimeout(() => {
       const elements = document.querySelectorAll(".short-item")
@@ -317,7 +317,14 @@ export function ShortsFeed() {
           
           {/* Vertical Mobile-Shaped Frame (YouTube Style) */}
           <div className="h-full w-full lg:h-[92vh] lg:max-w-[420px] lg:aspect-[9/16] lg:rounded-[3rem] relative bg-black overflow-hidden shadow-[0_0_150px_rgba(0,0,0,1)] border border-white/10 z-20 transform-gpu transition-all duration-500 ring-1 ring-white/5">
-            <ShortPlayer src={short.videoUrl} poster={short.videoUrl.replace(/\.[^/.]+$/, ".jpg")} isActive={index === currentIndex} isNext={index === currentIndex + 1} />
+            <ShortPlayer 
+              src={short.videoUrl} 
+              poster={short.videoUrl.replace(/\.[^/.]+$/, ".jpg")} 
+              isActive={index === currentIndex} 
+              isNext={index === currentIndex + 1 || index === currentIndex - 1} 
+              isMuted={isMuted}
+              onMuteToggle={() => setIsMuted(!isMuted)}
+            />
             
             {/* Bottom Info Overlay */}
             <div className="absolute inset-x-0 bottom-0 z-30 p-4 md:p-6 pb-14 bg-gradient-to-t from-black/95 via-black/40 to-transparent pointer-events-none">
@@ -394,44 +401,26 @@ export function ShortsFeed() {
   )
 }
 
-const ShortPlayer = memo(function ShortPlayer({ src, poster, isActive, isNext }: { src: string, poster?: string, isActive: boolean, isNext?: boolean }) {
+const ShortPlayer = memo(function ShortPlayer({ src, poster, isActive, isNext, isMuted, onMuteToggle }: { src: string, poster?: string, isActive: boolean, isNext: boolean, isMuted: boolean, onMuteToggle: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const [isMuted, setIsMuted] = useState(false)
-  const [isPaused, setIsPaused] = useState(false)
   const [showIcon, setShowIcon] = useState<"play" | "pause" | "volume" | "mute" | null>(null)
   const iconTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [hasError, setHasError] = useState(false)
-  const [needsInteraction, setNeedsInteraction] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [isPlaying, setIsPlaying] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
 
   const isStreamtape = src.includes("streamtape.com/")
 
   useEffect(() => {
-    const checkCache = async () => {
-      if (isStreamtape || !src || !videoRef.current) return
-      try {
-        const cache = await caches.open("video-downloads-v1")
-        const cachedResponse = await cache.match(src)
-        if (cachedResponse) {
-          const blob = await cachedResponse.blob()
-          const objectUrl = URL.createObjectURL(blob)
-          if (videoRef.current) videoRef.current.src = objectUrl
-          return () => URL.revokeObjectURL(objectUrl)
-        }
-      } catch (e) { console.error("Cache check failed in Shorts:", e) }
-    }
-    checkCache()
-  }, [src, isStreamtape])
-
-  useEffect(() => {
     if (isStreamtape || !src || !videoRef.current) return
     const video = videoRef.current
     
-    // Clear video resource if not active or next to save memory
     if (!isActive && !isNext) {
-      video.removeAttribute("src")
-      video.load()
+      if (video.src) {
+        video.removeAttribute("src")
+        video.load()
+      }
       return
     }
 
@@ -439,18 +428,17 @@ const ShortPlayer = memo(function ShortPlayer({ src, poster, isActive, isNext }:
 
     const isHLS = src.includes(".m3u8")
     if (isHLS) {
-      // Prioritize Native HLS for mobile (Safari, and many Chrome-on-Android versions)
       if (video.canPlayType("application/vnd.apple.mpegurl")) {
         video.src = src
       } else if (Hls.isSupported()) {
         const hls = new Hls({ 
           enableWorker: true, 
           lowLatencyMode: true, 
-          backBufferLength: 30, 
-          maxBufferLength: 20, 
-          maxMaxBufferLength: 40, 
+          backBufferLength: 60, 
+          maxBufferLength: 30, 
+          maxMaxBufferLength: 60, 
           autoStartLoad: isActive || isNext,
-          appendErrorMaxRetry: 3
+          appendErrorMaxRetry: 5
         })
         hls.loadSource(src)
         hls.attachMedia(video)
@@ -471,112 +459,90 @@ const ShortPlayer = memo(function ShortPlayer({ src, poster, isActive, isNext }:
   }, [src, isStreamtape, isActive, isNext, retryCount])
 
   useEffect(() => {
-    if (isStreamtape) return
     const video = videoRef.current
-    if (!video) return
+    if (!video || isStreamtape) return
+    
+    video.muted = isMuted
     if (isActive) {
       setHasError(false)
-      video.muted = isMuted
       const playPromise = video.play()
       if (playPromise !== undefined) {
         playPromise.catch(() => {
           video.muted = true
-          setIsMuted(true)
-          setNeedsInteraction(true)
           video.play().catch(() => {})
         })
       }
     } else {
       video.pause()
       video.currentTime = 0
+      setIsPlaying(false)
     }
-  }, [isActive, isStreamtape, isMuted, needsInteraction, retryCount])
+  }, [isActive, isStreamtape, isMuted, retryCount])
 
   const handleInteraction = (e: React.MouseEvent) => {
     e.stopPropagation()
     const video = videoRef.current
     if (!video) return
+    
     if (video.paused) {
-      video.play().then(() => {
-        setIsPaused(false)
-        triggerIcon("play")
-      }).catch(() => {})
+      video.play().then(() => { triggerIcon("play") }).catch(() => {})
     } else {
-      video.pause()
-      setIsPaused(true)
-      triggerIcon("pause")
+      onMuteToggle()
+      triggerIcon(isMuted ? "volume" : "mute")
     }
   }
 
-  const triggerIcon = (type: "play" | "pause") => {
+  const triggerIcon = (type: "play" | "pause" | "volume" | "mute") => {
     setShowIcon(type)
     if (iconTimeoutRef.current) clearTimeout(iconTimeoutRef.current)
     iconTimeoutRef.current = setTimeout(() => setShowIcon(null), 800)
   }
 
-  const handleRetry = () => {
-    setHasError(false)
-    setIsLoading(true)
-    setRetryCount(prev => prev + 1)
-  }
-
   return (
     <div className="relative h-full w-full group cursor-pointer bg-black overflow-hidden transform-gpu" onClick={handleInteraction}>
+      {!isPlaying && poster && (
+        <img 
+          src={poster} 
+          alt="" 
+          className="absolute inset-0 h-full w-full object-contain lg:object-cover z-0 transition-opacity duration-500"
+        />
+      )}
+      
       {hasError ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 p-8 text-center z-[100] bg-black/80 backdrop-blur-2xl">
           <Zap className="h-12 w-12 text-primary animate-pulse" />
-          <div className="space-y-2">
-            <h3 className="text-white text-xl font-black italic uppercase">Connection Lost</h3>
-            <p className="text-white/40 text-xs font-bold uppercase">We couldn't load this short.</p>
-          </div>
-          <Button variant="default" className="rounded-full font-black px-10 h-12 bg-primary text-white" onClick={(e) => { e.stopPropagation(); handleRetry() }}>Retry Loading</Button>
+          <h3 className="text-white text-xl font-black italic uppercase">Playback Error</h3>
+          <Button variant="default" className="rounded-full font-black px-10 h-12 bg-primary text-white" onClick={(e) => { e.stopPropagation(); setRetryCount(c => c+1) }}>Retry</Button>
         </div>
       ) : (
         <>
           <video 
             ref={videoRef} 
-            className="h-full w-full object-contain lg:object-cover transform-gpu" 
-            poster={poster} 
+            className={cn("h-full w-full object-contain lg:object-cover transform-gpu transition-opacity duration-700", isPlaying ? "opacity-100" : "opacity-0")}
             loop 
             playsInline 
-            muted={true} 
-            preload="metadata" 
-            onLoadStart={() => setIsLoading(true)} 
-            onCanPlay={() => setIsLoading(false)} 
+            muted={isMuted}
+            onPlaying={() => { setIsPlaying(true); setIsLoading(false) }}
+            onLoadStart={() => setIsLoading(true)}
+            onWaiting={() => setIsLoading(true)}
             onError={() => { if (isActive) setHasError(true) }} 
           />
           {isLoading && isActive && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm z-40 gap-4">
-              <Loader2 className="h-10 w-10 animate-spin text-primary" />
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest animate-pulse">Buffering</p>
+            <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[2px] z-40">
+              <Loader2 className="h-10 w-10 animate-spin text-primary shadow-2xl" />
             </div>
           )}
-          <div className="absolute inset-0 z-10" onClick={handleInteraction} />
+          <div className="absolute inset-0 z-10" />
         </>
       )}
+      
+      {/* Interaction Icons */}
       {showIcon && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/40 backdrop-blur-3xl p-10 rounded-full animate-out fade-out zoom-out duration-1000 pointer-events-none z-50 shadow-2xl border border-white/10">
-          {showIcon === "play" ? <Play className="h-16 w-16 text-white fill-current" /> : <Pause className="h-16 w-16 text-white fill-current" />}
-        </div>
-      )}
-      {needsInteraction && isActive && (
-        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-md animate-in fade-in duration-500">
-          <Button 
-            variant="default" 
-            className="rounded-full font-black h-20 px-10 animate-bounce bg-primary text-white uppercase italic tracking-widest" 
-            onClick={(e) => { 
-              e.stopPropagation()
-              const video = videoRef.current
-              if (video) { 
-                video.muted = false
-                setIsMuted(false)
-                setNeedsInteraction(false)
-                video.play().catch(() => {}) 
-              } 
-            }}
-          >
-            <Play className="h-8 w-8 mr-4 fill-current" />Unmute & Enjoy
-          </Button>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/50 backdrop-blur-3xl p-8 rounded-full animate-out fade-out zoom-out duration-1000 pointer-events-none z-50 border border-white/10">
+          {showIcon === "play" && <Play className="h-12 w-12 text-white fill-current" />}
+          {showIcon === "pause" && <Pause className="h-12 w-12 text-white fill-current" />}
+          {showIcon === "volume" && <Volume2 className="h-12 w-12 text-white fill-current" />}
+          {showIcon === "mute" && <VolumeX className="h-12 w-12 text-red-500 fill-current" />}
         </div>
       )}
     </div>
