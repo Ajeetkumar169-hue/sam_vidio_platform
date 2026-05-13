@@ -51,7 +51,6 @@ export function ShortsFeed() {
   const containerRef = useRef<HTMLDivElement>(null)
   const hideTimerRef = useRef<NodeJS.Timeout | null>(null)
   const viewedShorts = useRef<Set<string>>(new Set())
-  const [isMuted, setIsMuted] = useState(true)
 
   const showNavbars = useCallback(() => {
     window.dispatchEvent(new CustomEvent("toggle-navs", { detail: false }))
