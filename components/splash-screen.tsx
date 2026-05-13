@@ -58,11 +58,11 @@ export function SplashScreen({ onComplete }: { onComplete?: () => void }) {
         <div className="flex flex-col items-center gap-4">
             <div className="overflow-hidden">
                 <h1 className={`text-4xl md:text-7xl font-black text-white tracking-tight transition-all duration-1000 delay-300 transform ${isAnimating ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`}>
-                    Welcome to <span className="text-red-600 italic">SAM</span>
+                    ENJOY YOUR <span className="text-red-600 italic">LIFE</span>
                 </h1>
             </div>
             <p className={`text-white/40 font-bold tracking-[0.4em] uppercase text-[9px] md:text-xs transition-all duration-1000 delay-500 transform ${isAnimating ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
-                Premium Video Platform
+                Premium Video Experience
             </p>
         </div>
       </div>
