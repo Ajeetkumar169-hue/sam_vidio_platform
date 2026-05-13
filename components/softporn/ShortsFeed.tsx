@@ -362,20 +362,20 @@ export function ShortsFeed() {
              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-black to-black" />
           </div>
 
-          <div className="h-full w-full lg:h-[95vh] lg:aspect-[9/16] lg:rounded-3xl relative bg-black overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/5">
+          <div className="h-full w-full lg:h-[95vh] lg:aspect-[9/16] lg:rounded-3xl relative bg-black overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.8)] border border-white/10">
             {/* Desktop Navigation Arrows */}
-            <div className="absolute left-full ml-6 bottom-1/2 translate-y-1/2 hidden lg:flex flex-col gap-6 z-50">
+            <div className="absolute left-full ml-10 bottom-1/2 translate-y-1/2 hidden lg:flex flex-col gap-8 z-[60] pointer-events-auto">
                 <button 
                   onClick={(e) => { e.stopPropagation(); scrollPrev(); }} 
-                  className="h-12 w-12 rounded-full bg-white/5 hover:bg-primary/20 backdrop-blur-xl flex items-center justify-center text-white transition-all shadow-2xl border border-white/10 hover:border-primary/50 group"
+                  className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary/20 backdrop-blur-3xl flex items-center justify-center text-white transition-all shadow-2xl border border-white/10 hover:border-primary/50 group"
                 >
-                    <Zap className="h-5 w-5 rotate-180 group-hover:scale-125 transition-transform" />
+                    <Zap className="h-6 w-6 rotate-180 group-hover:scale-125 transition-transform" />
                 </button>
                 <button 
                   onClick={(e) => { e.stopPropagation(); scrollNext(); }} 
-                  className="h-12 w-12 rounded-full bg-white/5 hover:bg-primary/20 backdrop-blur-xl flex items-center justify-center text-white transition-all shadow-2xl border border-white/10 hover:border-primary/50 group"
+                  className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary/20 backdrop-blur-3xl flex items-center justify-center text-white transition-all shadow-2xl border border-white/10 hover:border-primary/50 group"
                 >
-                    <Zap className="h-5 w-5 group-hover:scale-125 transition-transform" />
+                    <Zap className="h-6 w-6 group-hover:scale-125 transition-transform" />
                 </button>
             </div>
 
@@ -386,171 +386,182 @@ export function ShortsFeed() {
                 isNext={index === currentIndex + 1}
             />
 
-            {/* UI Overlay */}
-            <div className="absolute inset-0 flex flex-col justify-end p-4 pb-8 md:p-6 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none">
-              
-              <div className="flex flex-row justify-between items-end gap-4 pointer-events-auto">
-                {/* Info & Actions */}
-                <div className="flex-1 pb-4 text-left flex flex-col items-start gap-3">
-                   <div className="flex items-center justify-start gap-2 mb-1">
-                      <Link 
-                        href={`/channel/${short.channel.slug}`} 
+            {/* UI Overlay - Primary Hit Target for Video Pause */}
+            <div 
+                className="absolute inset-0 z-10 pointer-events-auto" 
+                onClick={(e) => {
+                    // This is the "click anywhere else" handler
+                    // It will reach here ONLY if a child didn't stop propagation
+                }}
+            >
+                {/* Content Overlay */}
+                <div className="absolute inset-0 flex flex-col justify-end p-4 pb-10 md:p-6 bg-gradient-to-t from-black/90 via-transparent to-transparent pointer-events-none z-20">
+                  <div className="flex flex-row justify-between items-end gap-4">
+                    {/* Info & Actions */}
+                    <div className="flex-1 pb-4 text-left flex flex-col items-start gap-4 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+                       <div className="flex items-center justify-start gap-2 mb-1">
+                          <Link 
+                            href={`/channel/${short.channel.slug}`} 
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex items-center gap-2 hover:opacity-80 transition-all active:scale-95 group"
+                          >
+                            <div className="h-10 w-10 rounded-full bg-primary overflow-hidden border-2 border-white/20 shadow-lg group-hover:border-primary/50">
+                                {short.channel.logo ? <img src={short.channel.logo} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full flex items-center justify-center font-bold text-sm bg-secondary">{short.channel.name[0]}</div>}
+                            </div>
+                            <div className="flex flex-col">
+                               <p className="font-black text-white text-sm shadow-sm">@{short.channel.slug}</p>
+                               <p className="text-[10px] text-white/60 font-bold uppercase tracking-wider">{short.channel.name}</p>
+                            </div>
+                          </Link>
+                          <Button 
+                            size="sm" 
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                handleSubscribe(short.channel.slug)
+                            }}
+                            className={cn(
+                                "h-9 rounded-full font-black px-6 ml-4 transition-all active:scale-90 shadow-xl uppercase tracking-widest text-[10px]",
+                                subscribedStatus[short.channel.slug] 
+                                    ? "bg-white/10 text-white backdrop-blur-md hover:bg-white/20 border border-white/10" 
+                                    : "bg-primary text-white hover:bg-primary/90 shadow-primary/20"
+                            )}
+                          >
+                            {subscribedStatus[short.channel.slug] ? "Joined" : "Join"}
+                          </Button>
+                       </div>
+                       
+                       <div className="space-y-2 flex flex-col items-start w-full">
+                          <div className="flex items-center gap-3 max-w-full">
+                              <h3 className="font-bold text-white text-lg leading-tight truncate mb-1 drop-shadow-md">
+                                  {short.title}
+                              </h3>
+                              {short.description && (
+                                  <button 
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        setExpandedId(expandedId === short._id ? null : short._id)
+                                    }}
+                                    className="text-[9px] font-black text-white/90 hover:text-white uppercase tracking-widest bg-white/10 backdrop-blur-md px-3 py-1 rounded-lg shrink-0 border border-white/10"
+                                  >
+                                      {expandedId === short._id ? "LESS" : "MORE"}
+                                  </button>
+                              )}
+                          </div>
+                          {expandedId === short._id && short.description && (
+                              <div className="text-xs text-white/90 bg-black/80 p-4 rounded-2xl backdrop-blur-xl mb-2 max-h-40 overflow-y-auto w-full border border-white/10 shadow-2xl animate-in slide-in-from-bottom-2 duration-300">
+                                  {short.description}
+                              </div>
+                          )}
+                       </div>
+                    </div>
+
+                    {/* Right Actions Sidebar - Aggressive propagation control */}
+                    <div 
+                        className="flex flex-col gap-6 items-center mb-4 pr-1 pointer-events-auto" 
                         onClick={(e) => e.stopPropagation()}
-                        className="flex items-center gap-2 hover:opacity-80 transition-all active:scale-95 z-50"
-                      >
-                        <div className="h-9 w-9 rounded-full bg-primary overflow-hidden border-2 border-white/20 shadow-lg">
-                            {short.channel.logo ? <img src={short.channel.logo} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full flex items-center justify-center font-bold text-xs bg-secondary">{short.channel.name[0]}</div>}
+                    >
+                        {/* Like */}
+                        <div className="flex flex-col items-center gap-1.5 group">
+                            <button 
+                              onClick={(e) => {
+                                 e.stopPropagation()
+                                 handleLike(short._id)
+                              }}
+                              className={cn(
+                                "h-10 w-10 md:h-11 md:w-11 rounded-full backdrop-blur-2xl flex items-center justify-center transition-all active:scale-75 shadow-xl border border-white/10",
+                                likedStatus[short._id]?.liked ? "bg-primary text-white border-primary" : "bg-white/10 text-white hover:bg-white/20"
+                              )}
+                            >
+                                <ThumbsUp className={cn("h-5 w-5 transition-transform group-hover:scale-110", likedStatus[short._id]?.liked && "fill-current")} />
+                            </button>
+                            <span className="text-[10px] font-black text-white drop-shadow-lg">{formatNumber(likedStatus[short._id]?.likes || short.likes)}</span>
                         </div>
-                        <div className="flex flex-col">
-                           <p className="font-black text-white text-xs shadow-sm">@{short.channel.slug}</p>
-                           <p className="text-[9px] text-white/60 font-bold uppercase tracking-wider">{short.channel.name}</p>
+
+                        {/* Dislike */}
+                        <div className="flex flex-col items-center gap-1.5 group">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDislike(short._id)
+                              }}
+                              className={cn(
+                                "h-10 w-10 md:h-11 md:w-11 rounded-full backdrop-blur-2xl flex items-center justify-center transition-all active:scale-75 shadow-xl border border-white/10",
+                                likedStatus[short._id]?.disliked ? "bg-white text-black border-white" : "bg-white/10 text-white hover:bg-white/20"
+                              )}
+                            >
+                                <ThumbsUp className={cn("h-5 w-5 rotate-180 transition-transform group-hover:scale-110", likedStatus[short._id]?.disliked && "fill-current")} />
+                            </button>
+                            <span className="text-[9px] font-black text-white/80 uppercase tracking-tighter drop-shadow-lg">Dislike</span>
                         </div>
-                      </Link>
-                      <Button 
-                        size="sm" 
-                        onClick={(e) => {
-                            e.stopPropagation()
-                            handleSubscribe(short.channel.slug)
-                        }}
-                        className={cn(
-                            "h-8 rounded-full font-black px-4 ml-3 transition-all active:scale-90 shadow-xl z-50 uppercase tracking-widest text-[9px]",
-                            subscribedStatus[short.channel.slug] 
-                                ? "bg-white/10 text-white backdrop-blur-md hover:bg-white/20 border border-white/10" 
-                                : "bg-primary text-white hover:bg-primary/90 shadow-primary/20"
-                        )}
-                      >
-                        {subscribedStatus[short.channel.slug] ? "Joined" : "Join"}
-                      </Button>
-                   </div>
-                   
-                   <div className="space-y-1.5 flex flex-col items-start w-full">
-                      <div className="flex items-center gap-2 max-w-full">
-                          <h3 className="font-bold text-white text-base leading-tight truncate mb-1 drop-shadow-md">
-                              {short.title}
-                          </h3>
-                          {short.description && (
+
+                        {/* Delete (Only for Owner/Admin) */}
+                        {(user?.id === short.uploader || user?.role === "admin") && (
+                          <div className="flex flex-col items-center gap-1.5 group">
                               <button 
                                 onClick={(e) => {
-                                    e.stopPropagation()
-                                    setExpandedId(expandedId === short._id ? null : short._id)
+                                   e.stopPropagation()
+                                   handleDelete(short._id)
                                 }}
-                                className="text-[8px] font-black text-white/90 hover:text-white uppercase tracking-widest bg-white/10 backdrop-blur-md px-2 py-0.5 rounded-lg shrink-0 border border-white/10"
+                                className="h-10 w-10 md:h-11 md:w-11 rounded-full bg-destructive/20 backdrop-blur-2xl flex items-center justify-center text-destructive hover:bg-destructive/40 transition-all active:scale-75 border border-destructive/20 shadow-xl"
                               >
-                                  {expandedId === short._id ? "LESS" : "MORE"}
+                                  <Trash2 className="h-5 w-5" />
                               </button>
-                          )}
-                      </div>
-                      {expandedId === short._id && short.description && (
-                          <div className="text-[11px] text-white/90 bg-black/80 p-3 rounded-xl backdrop-blur-xl mb-2 max-h-32 overflow-y-auto w-[95%] border border-white/10 shadow-2xl">
-                              {short.description}
+                              <span className="text-[9px] font-black text-destructive/80 uppercase tracking-tighter drop-shadow-lg">Delete</span>
                           </div>
-                      )}
-                   </div>
-                </div>
+                        )}
 
-                {/* Right Actions Sidebar - SHRUNK BUTTONS */}
-                <div className="flex flex-col gap-5 items-center mb-4 pr-0.5">
-                    {/* Like */}
-                    <div className="flex flex-col items-center gap-1 group">
-                        <button 
-                          onClick={(e) => {
-                             e.stopPropagation()
-                             handleLike(short._id)
-                          }}
-                          className={cn(
-                            "h-10 w-10 rounded-full backdrop-blur-xl flex items-center justify-center transition-all active:scale-75 shadow-xl border border-white/10",
-                            likedStatus[short._id]?.liked ? "bg-primary text-white border-primary" : "bg-white/10 text-white hover:bg-white/20"
-                          )}
-                        >
-                            <ThumbsUp className={cn("h-5 w-5 transition-transform group-hover:scale-110", likedStatus[short._id]?.liked && "fill-current")} />
-                        </button>
-                        <span className="text-[10px] font-black text-white drop-shadow-lg">{formatNumber(likedStatus[short._id]?.likes || short.likes)}</span>
-                    </div>
-
-                    {/* Dislike */}
-                    <div className="flex flex-col items-center gap-1 group">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleDislike(short._id)
-                          }}
-                          className={cn(
-                            "h-10 w-10 rounded-full backdrop-blur-xl flex items-center justify-center transition-all active:scale-75 shadow-xl border border-white/10",
-                            likedStatus[short._id]?.disliked ? "bg-white text-black border-white" : "bg-white/10 text-white hover:bg-white/20"
-                          )}
-                        >
-                            <ThumbsUp className={cn("h-5 w-5 rotate-180 transition-transform group-hover:scale-110", likedStatus[short._id]?.disliked && "fill-current")} />
-                        </button>
-                        <span className="text-[9px] font-black text-white/80 uppercase tracking-tighter drop-shadow-lg">Dislike</span>
-                    </div>
-
-                    {/* Delete (Only for Owner/Admin) */}
-                    {(user?.id === short.uploader || user?.role === "admin") && (
-                      <div className="flex flex-col items-center gap-1 group">
-                          <button 
-                            onClick={(e) => {
-                               e.stopPropagation()
-                               handleDelete(short._id)
-                            }}
-                            className="h-10 w-10 rounded-full bg-destructive/20 backdrop-blur-xl flex items-center justify-center text-destructive hover:bg-destructive/40 transition-all active:scale-75 border border-destructive/20 shadow-xl"
-                          >
-                              <Trash2 className="h-5 w-5" />
-                          </button>
-                          <span className="text-[9px] font-black text-destructive/80 uppercase tracking-tighter drop-shadow-lg">Delete</span>
-                      </div>
-                    )}
-
-                    {/* Comments */}
-                    <div className="flex flex-col items-center gap-1 group">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setCommentShortId(short._id)
-                            setCommentOpen(true)
-                          }}
-                          className="h-10 w-10 rounded-full bg-white/10 backdrop-blur-xl flex items-center justify-center hover:bg-white/20 transition-all active:scale-75 shadow-xl border border-white/10"
-                        >
-                            <MessageSquare className="h-5 w-5 text-white group-hover:scale-110 transition-transform" />
-                        </button>
-                        <span className="text-[9px] font-black text-white/80 uppercase tracking-tighter drop-shadow-lg">Chat</span>
-                    </div>
-
-                    {/* Share */}
-                    <div className="flex flex-col items-center gap-1 group">
-                        <ShareDialog 
-                          videoId={short._id} 
-                          title={short.title} 
-                          trigger={
+                        {/* Comments */}
+                        <div className="flex flex-col items-center gap-1.5 group">
                             <button 
-                              onClick={(e) => e.stopPropagation()}
-                              className="h-10 w-10 rounded-full bg-white/10 backdrop-blur-xl flex items-center justify-center hover:bg-white/20 transition-all active:scale-75 shadow-xl border border-white/10"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setCommentShortId(short._id)
+                                setCommentOpen(true)
+                              }}
+                              className="h-10 w-10 md:h-11 md:w-11 rounded-full bg-white/10 backdrop-blur-2xl flex items-center justify-center hover:bg-white/20 transition-all active:scale-75 shadow-xl border border-white/10"
                             >
-                                <Share2 className="h-5 w-5 text-white group-hover:scale-110 transition-transform" />
+                                <MessageSquare className="h-5 w-5 text-white group-hover:scale-110 transition-transform" />
                             </button>
-                          }
-                        />
-                        <span className="text-[9px] font-black text-white/80 uppercase tracking-tighter drop-shadow-lg">Share</span>
-                    </div>
+                            <span className="text-[9px] font-black text-white/80 uppercase tracking-tighter drop-shadow-lg">Chat</span>
+                        </div>
 
-                    {/* Download */}
-                    <div className="flex flex-col items-center gap-1 group">
-                        <DownloadButton 
-                          video={short as any} 
-                          trigger={
-                            <button 
-                                onClick={(e) => e.stopPropagation()}
-                                className="h-10 w-10 rounded-full bg-white/10 backdrop-blur-xl flex items-center justify-center hover:bg-white/20 transition-all active:scale-75 shadow-xl border border-white/10"
-                            >
-                                <DownloadCloud className="h-5 w-5 text-white group-hover:scale-110 transition-transform" />
-                            </button>
-                          }
-                        />
-                        <span className="text-[9px] font-black text-white/80 uppercase tracking-tighter drop-shadow-lg">Save</span>
+                        {/* Share */}
+                        <div className="flex flex-col items-center gap-1.5 group">
+                            <ShareDialog 
+                              videoId={short._id} 
+                              title={short.title} 
+                              trigger={
+                                <button 
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="h-10 w-10 md:h-11 md:w-11 rounded-full bg-white/10 backdrop-blur-2xl flex items-center justify-center hover:bg-white/20 transition-all active:scale-75 shadow-xl border border-white/10"
+                                >
+                                    <Share2 className="h-5 w-5 text-white group-hover:scale-110 transition-transform" />
+                                </button>
+                              }
+                            />
+                            <span className="text-[9px] font-black text-white/80 uppercase tracking-tighter drop-shadow-lg">Share</span>
+                        </div>
+
+                        {/* Download */}
+                        <div className="flex flex-col items-center gap-1.5 group">
+                            <DownloadButton 
+                              video={short as any} 
+                              trigger={
+                                <button 
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="h-10 w-10 md:h-11 md:w-11 rounded-full bg-white/10 backdrop-blur-2xl flex items-center justify-center hover:bg-white/20 transition-all active:scale-75 shadow-xl border border-white/10"
+                                >
+                                    <DownloadCloud className="h-5 w-5 text-white group-hover:scale-110 transition-transform" />
+                                </button>
+                              }
+                            />
+                            <span className="text-[9px] font-black text-white/80 uppercase tracking-tighter drop-shadow-lg">Save</span>
+                        </div>
                     </div>
+                  </div>
                 </div>
-              </div>
-
             </div>
+          </div>
           </div>
         </div>
       ))}
