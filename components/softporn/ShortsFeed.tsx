@@ -312,10 +312,11 @@ export function ShortsFeed() {
     <div ref={containerRef} onScroll={handleScroll} className="h-full w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar bg-black overscroll-none touch-pan-y">
       {shorts.map((short, index) => (
         <div key={short._id} data-index={index} className="short-item h-full w-full snap-start snap-always relative flex items-center justify-center bg-black will-change-transform transform-gpu">
-          {/* Desktop Background Glow */}
-          <div className="absolute inset-0 hidden lg:block opacity-30 bg-gradient-to-br from-primary/10 via-black to-black pointer-events-none" />
+          {/* Desktop Background Depth */}
+          <div className="absolute inset-0 hidden lg:block opacity-40 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary/5 via-black to-black pointer-events-none" />
           
-          <div className="h-full w-full lg:h-[92vh] lg:aspect-[9/16] lg:rounded-[2.5rem] relative bg-black overflow-hidden shadow-[0_0_100px_rgba(0,0,0,1)] border border-white/5 z-20 transform-gpu transition-all duration-500">
+          {/* Vertical Mobile-Shaped Frame (YouTube Style) */}
+          <div className="h-full w-full lg:h-[92vh] lg:max-w-[420px] lg:aspect-[9/16] lg:rounded-[3rem] relative bg-black overflow-hidden shadow-[0_0_150px_rgba(0,0,0,1)] border border-white/10 z-20 transform-gpu transition-all duration-500 ring-1 ring-white/5">
             <ShortPlayer src={short.videoUrl} poster={short.videoUrl.replace(/\.[^/.]+$/, ".jpg")} isActive={index === currentIndex} isNext={index === currentIndex + 1} />
             
             {/* Bottom Info Overlay */}
