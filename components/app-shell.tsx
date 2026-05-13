@@ -25,19 +25,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isShorts = pathname === "/softporn"
   
   useEffect(() => {
-    // Check if splash has already been shown in this session
-    const hasShown = sessionStorage.getItem("splash_shown")
-    if (hasShown) {
-      setIsSplashDone(true)
-    }
-
     const handleHide = (e: any) => setHideNavs(e.detail)
     window.addEventListener("toggle-navs", handleHide as any)
     return () => window.removeEventListener("toggle-navs", handleHide as any)
   }, [])
 
   const handleSplashComplete = () => {
-    sessionStorage.setItem("splash_shown", "true")
     setIsSplashDone(true)
   }
   
