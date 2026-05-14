@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useRef, memo, useCallback } from "react"
+import { useState, useEffect, useRef, memo, useCallback, Suspense } from "react"
+import { useSearchParams } from "next/navigation"
 import { ThumbsUp, MessageSquare, Share2, Loader2, Zap, Trash2, Play, Pause, Volume2, VolumeX } from "lucide-react"
 import Hls from "hls.js"
 import { cn } from "@/lib/utils"
@@ -36,8 +37,18 @@ interface Short {
 }
 
 export function ShortsFeed() {
+  return (
+    <Suspense fallback={<div className="flex h-[80vh] items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>}>
+      <ShortsFeedContent />
+    </Suspense>
+  )
+}
+
+function ShortsFeedContent() {
   const { user } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const initialVideoId = searchParams.get("v")
   const [shorts, setShorts] = useState<Short[]>([])
   const [loading, setLoading] = useState(true)
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -84,8 +95,29 @@ export function ShortsFeed() {
     fetch("/api/videos?isShort=true&limit=15")
       .then(res => res.json())
       .then(async (data) => {
-        const videos = data.data.videos || []
+        let videos = data.data.videos || []
+        
+        // If initialVideoId is provided, make sure it's in the list
+        if (initialVideoId && !videos.some((v: Short) => v._id === initialVideoId)) {
+          try {
+            const res = await fetch(`/api/videos/${initialVideoId}`)
+            const detail = await res.json()
+            if (detail.video && detail.video.isShort) {
+              videos = [detail.video, ...videos]
+            }
+          } catch (err) {
+            console.error("Failed to fetch initial short:", err)
+          }
+        }
+
         setShorts(videos)
+        
+        // Set initial index if v=... is in URL
+        if (initialVideoId) {
+          const index = videos.findIndex((v: Short) => v._id === initialVideoId)
+          if (index !== -1) setCurrentIndex(index)
+        }
+
         const status: Record<string, { liked: boolean, disliked: boolean, likes: number }> = {}
         videos.forEach((v: Short) => {
           status[v._id] = { liked: false, disliked: false, likes: v.likes }
@@ -116,7 +148,7 @@ export function ShortsFeed() {
         setLoading(false)
       })
       .catch(() => setLoading(false))
-  }, [user])
+  }, [user, initialVideoId])
 
   useEffect(() => {
     const observer = new IntersectionObserver(

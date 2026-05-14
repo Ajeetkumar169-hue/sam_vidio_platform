@@ -174,7 +174,7 @@ export default function DownloadsPage() {
                 {filteredDownloads.map((video) => (
                   <div key={video.id || video._id} className="group relative flex gap-4 hover:bg-white/5 p-3 rounded-[2rem] transition-all duration-300">
                     <Link
-                      href={`/watch/${video.id || video._id}`}
+                      href={video.isShort ? `/softporn?v=${video.id || video._id}` : `/watch/${video.id || video._id}`}
                       className="relative w-44 h-24 md:w-64 md:h-36 shrink-0 overflow-hidden rounded-[1.5rem] bg-secondary"
                     >
                       <Image
@@ -203,7 +203,7 @@ export default function DownloadsPage() {
                     <div className="flex-1 min-w-0 py-2">
                       <div className="flex flex-col h-full justify-between">
                         <div>
-                          <Link href={`/watch/${video.id || video._id}`}>
+                          <Link href={video.isShort ? `/softporn?v=${video.id || video._id}` : `/watch/${video.id || video._id}`}>
                             <h2 className="text-base md:text-xl font-bold line-clamp-2 leading-tight group-hover:text-primary transition-colors mb-2 pr-10">
                               {video.title}
                             </h2>

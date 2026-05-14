@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 import {
   LayoutDashboard,
   Upload,
@@ -24,6 +25,8 @@ import {
   Trash2,
   Edit,
   Zap,
+  Search,
+  CheckSquare,
 } from "lucide-react"
 
 interface DashboardData {
@@ -68,6 +71,8 @@ export default function DashboardPage() {
   const router = useRouter()
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState("")
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
 
   // Channel edit state
   const [editName, setEditName] = useState("")
@@ -117,7 +122,7 @@ export default function DashboardPage() {
   }
 
   const handleDeleteVideo = async (videoId: string) => {
-    if (!confirm("Are you sure you want to delete this video?")) return
+    if (!confirm("Are you sure you want to delete this video? This will also remove it from Cloudinary.")) return
     try {
       const res = await fetch(`/api/videos/${videoId}`, { method: "DELETE" })
       if (!res.ok) throw new Error("Failed")
@@ -134,6 +139,42 @@ export default function DashboardPage() {
     } catch {
       toast.error("Failed to delete video")
     }
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return
+    if (!confirm(`Are you sure you want to delete ${selectedIds.length} videos? This will also remove them from Cloudinary.`)) return
+    
+    setLoading(true)
+    try {
+      // We can iterate or use a bulk endpoint if available. 
+      // The current API [id]/route.ts only handles single DELETE.
+      // But we can call it in parallel or create a bulk endpoint.
+      // For now, let's do it in parallel for better speed.
+      await Promise.all(selectedIds.map(id => fetch(`/api/videos/${id}`, { method: "DELETE" })))
+      
+      setData((prev) =>
+        prev
+          ? {
+            ...prev,
+            videos: prev.videos.filter((v) => !selectedIds.includes((v as any)._id || (v as any).id)),
+            stats: { ...prev.stats, totalVideos: prev.stats.totalVideos - selectedIds.length },
+          }
+          : prev
+      )
+      setSelectedIds([])
+      toast.success(`${selectedIds.length} videos deleted`)
+    } catch {
+      toast.error("Failed to delete some videos")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    )
   }
 
   if (authLoading || (!user && loading)) {
@@ -179,6 +220,43 @@ export default function DashboardPage() {
         </Link>
       </div>
 
+      {/* Search & Bulk Actions */}
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center justify-between">
+        <div className="relative w-full max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input 
+            placeholder="Search your videos..." 
+            className="pl-10 h-11 bg-secondary/30 border-white/5 rounded-xl focus:ring-1 focus:ring-primary"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        
+        {selectedIds.length > 0 && (
+          <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right duration-300">
+            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              {selectedIds.length} Selected
+            </span>
+            <Button 
+              variant="destructive" 
+              size="sm" 
+              className="rounded-xl font-bold h-11 px-6 shadow-lg shadow-destructive/20"
+              onClick={handleBulkDelete}
+            >
+              <Trash2 className="h-4 w-4 mr-2" /> Delete All
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="rounded-xl font-bold h-11 px-6 border-white/10"
+              onClick={() => setSelectedIds([])}
+            >
+              Cancel
+            </Button>
+          </div>
+        )}
+      </div>
+
       {/* Stats */}
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard icon={<Film className="h-5 w-5" />} label="Videos" value={data.stats.totalVideos} />
@@ -198,16 +276,20 @@ export default function DashboardPage() {
         {/* Videos Tab */}
         <TabsContent value="videos">
           <VideoList 
-            videos={data.videos.filter(v => !v.isShort)} 
+            videos={data.videos.filter(v => !v.isShort && (search === "" || v.title.toLowerCase().includes(search.toLowerCase())))} 
             onDelete={handleDeleteVideo}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelect}
           />
         </TabsContent>
 
         {/* Shorts Tab */}
         <TabsContent value="softporn">
           <VideoList 
-            videos={data.videos.filter(v => v.isShort)} 
+            videos={data.videos.filter(v => v.isShort && (search === "" || v.title.toLowerCase().includes(search.toLowerCase())))} 
             onDelete={handleDeleteVideo}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelect}
           />
         </TabsContent>
 
@@ -233,7 +315,17 @@ function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string
   )
 }
 
-function VideoList({ videos, onDelete }: { videos: any[], onDelete: (id: string) => void }) {
+function VideoList({ 
+  videos, 
+  onDelete, 
+  selectedIds, 
+  onToggleSelect 
+}: { 
+  videos: any[], 
+  onDelete: (id: string) => void,
+  selectedIds: string[],
+  onToggleSelect: (id: string) => void
+}) {
     const router = useRouter()
     
     if (videos.length === 0) {
@@ -252,8 +344,23 @@ function VideoList({ videos, onDelete }: { videos: any[], onDelete: (id: string)
                 return (
                     <div
                         key={videoId}
-                        className="flex items-center gap-4 rounded-xl border border-white/5 bg-secondary/20 p-4 transition-all hover:bg-secondary/30"
+                        className={cn(
+                          "flex items-center gap-4 rounded-xl border p-4 transition-all hover:bg-secondary/30",
+                          selectedIds.includes(videoId) ? "border-primary/50 bg-primary/5" : "border-white/5 bg-secondary/20"
+                        )}
                     >
+                        <div 
+                          className="cursor-pointer group flex items-center justify-center"
+                          onClick={() => onToggleSelect(videoId)}
+                        >
+                          <div className={cn(
+                            "h-5 w-5 rounded border flex items-center justify-center transition-all",
+                            selectedIds.includes(videoId) ? "bg-primary border-primary" : "border-white/20 group-hover:border-primary/50"
+                          )}>
+                            {selectedIds.includes(videoId) && <CheckSquare className="h-4 w-4 text-white" />}
+                          </div>
+                        </div>
+
                         <div className="h-16 w-28 flex-shrink-0 overflow-hidden rounded-lg bg-secondary shadow-lg">
                             {video.thumbnailUrl ? (
                                 <img src={video.thumbnailUrl} alt={video.title} className="h-full w-full object-cover" />
@@ -264,7 +371,7 @@ function VideoList({ videos, onDelete }: { videos: any[], onDelete: (id: string)
                             )}
                         </div>
                         <div className="min-w-0 flex-1">
-                            <Link href={`/watch/${videoId}`}>
+                            <Link href={video.isShort ? `/softporn?v=${videoId}` : `/watch/${videoId}`}>
                                 <h3 className="truncate text-sm font-black text-foreground hover:text-primary uppercase tracking-tight">
                                     {video.title}
                                 </h3>

@@ -12,7 +12,18 @@ import { SplashScreen } from "@/components/splash-screen"
 import { InstallPwaDialog } from "@/components/install-pwa-dialog"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const [isSplashDone, setIsSplashDone] = useState(false)
+  const [isSplashDone, setIsSplashDone] = useState<boolean | null>(null)
+  const [isReturningUser, setIsReturningUser] = useState(false)
+  
+  useEffect(() => {
+    const hasSeen = localStorage.getItem("has-seen-splash")
+    if (hasSeen === "true") {
+      setIsSplashDone(true)
+      setIsReturningUser(true)
+    } else {
+      setIsSplashDone(false)
+    }
+  }, [])
   
   // Desktop Sidebar States
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -31,6 +42,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [])
 
   const handleSplashComplete = () => {
+    localStorage.setItem("has-seen-splash", "true")
     setIsSplashDone(true)
   }
   
@@ -74,7 +86,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {!isSplashDone && <SplashScreen onComplete={handleSplashComplete} />}
+      {isSplashDone === false && <SplashScreen onComplete={handleSplashComplete} />}
       <AgeVerification />
       
       {/* PWA Install Prompt - Higher Z-Index and only on Home Page */}
@@ -87,8 +99,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       )}
       
       <div className={cn(
-        "flex h-screen flex-col relative overflow-hidden bg-background transition-opacity duration-500",
-        isSplashDone ? "opacity-100" : "opacity-0 pointer-events-none"
+        "flex h-screen flex-col relative overflow-hidden bg-background",
+        isSplashDone ? "opacity-100" : "opacity-0 pointer-events-none",
+        !isReturningUser && "transition-opacity duration-1000 ease-in-out"
       )}>
         
         {/* Invisible Hover Zone (Desktop Only) */}

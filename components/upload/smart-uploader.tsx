@@ -12,9 +12,22 @@ interface SmartUploaderProps {
   metadata: any
 }
 
-/**
- * Auto-generates a thumbnail from a video file by seeking to ~10% duration.
- */
+async function getVideoDuration(file: File): Promise<number> {
+  return new Promise((resolve) => {
+    const video = document.createElement("video")
+    video.preload = "metadata"
+    video.onloadedmetadata = () => {
+      resolve(video.duration)
+      URL.revokeObjectURL(video.src)
+    }
+    video.onerror = () => {
+      resolve(0)
+      URL.revokeObjectURL(video.src)
+    }
+    video.src = URL.createObjectURL(file)
+  })
+}
+
 async function generateThumbnail(file: File): Promise<string | null> {
   return new Promise((resolve) => {
     try {
@@ -56,6 +69,7 @@ export function SmartUploader({ onUploadComplete, onFileSelected, metadata }: Sm
   const [speed, setSpeed] = useState(0)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [isMockMode, setIsMockMode] = useState<boolean | null>(null)
+  const [angryError, setAngryError] = useState<{ show: boolean, msg: string, limit: string } | null>(null)
 
   // Detect mock/local mode
   useEffect(() => {
@@ -77,6 +91,36 @@ export function SmartUploader({ onUploadComplete, onFileSelected, metadata }: Sm
     if (!f.type.startsWith("video/")) {
       toast.error("Please select a video file")
       return
+    }
+
+    // Check duration limits
+    const duration = await getVideoDuration(f)
+    if (metadata.isShort && duration > 120) {
+      setAngryError({ 
+        show: true, 
+        msg: "You can't upload videos that are longer than 2 minutes.",
+        limit: "Shorts Limit: 120 Seconds"
+      })
+      if (fileInputRef.current) fileInputRef.current.value = ""
+      return
+    } else if (!metadata.isShort) {
+      if (duration < 300) {
+        setAngryError({ 
+          show: true, 
+          msg: "You cannot upload videos shorter than 5 minutes.",
+          limit: "Minimum Requirement: 5 Minutes"
+        })
+        if (fileInputRef.current) fileInputRef.current.value = ""
+        return
+      } else if (duration > 5400) {
+        setAngryError({ 
+          show: true, 
+          msg: "You cannot upload videos longer than an hour and a half.",
+          limit: "Video Limit: 1.5 Hours"
+        })
+        if (fileInputRef.current) fileInputRef.current.value = ""
+        return
+      }
     }
 
     setFile(f)
@@ -453,6 +497,45 @@ export function SmartUploader({ onUploadComplete, onFileSelected, metadata }: Sm
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Angry Error Overlay for Duration Limits */}
+      {angryError?.show && (
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/95 backdrop-blur-2xl animate-in fade-in zoom-in duration-500">
+          <div className="flex flex-col items-center gap-10 text-center px-6 max-w-lg">
+            <div className="relative group">
+              <div className="absolute -inset-8 bg-red-600/20 rounded-full blur-3xl animate-pulse" />
+              <span className="text-9xl md:text-[15rem] inline-block animate-bounce drop-shadow-[0_0_50px_rgba(220,38,38,0.5)]">
+                🤬
+              </span>
+              <div className="absolute -top-4 -right-4 text-5xl md:text-7xl animate-ping opacity-75">💢</div>
+              <div className="absolute -bottom-4 -left-4 text-4xl md:text-6xl animate-pulse delay-75">💨</div>
+            </div>
+
+            <div className="space-y-6">
+              <h2 className="text-4xl md:text-6xl font-black text-red-500 italic uppercase tracking-tighter leading-none [text-shadow:0_0_30px_rgba(239,68,68,0.3)]">
+                UPLOAD BLOCKED!
+              </h2>
+              <div className="space-y-2">
+                <p className="text-xl md:text-2xl font-bold text-white uppercase tracking-tight">
+                    {angryError.msg}
+                </p>
+                <p className="text-sm font-medium text-white/40 uppercase tracking-[0.3em]">
+                    {angryError.limit}
+                </p>
+              </div>
+            </div>
+
+            <Button 
+              variant="destructive" 
+              size="lg" 
+              className="h-16 px-12 rounded-2xl text-xl font-black uppercase tracking-tighter shadow-2xl shadow-red-600/40 hover:scale-105 active:scale-95 transition-all"
+              onClick={() => setAngryError(null)}
+            >
+              I UNDERSTAND
+            </Button>
           </div>
         </div>
       )}

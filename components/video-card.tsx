@@ -32,6 +32,7 @@ interface VideoCardProps {
     }
     channelName?: string
     channelAvatar?: string
+    isShort?: boolean
   }
   compact?: boolean
   index?: number
@@ -99,8 +100,10 @@ export function VideoCard({ video, compact, index = 10, className }: VideoCardPr
     80
   )
 
+  const href = video.isShort ? `/softporn?v=${videoId}` : `/watch/${videoId}`
+  
   return (
-    <Link href={`/watch/${videoId}`} className={cn("group block content-visibility-auto", className)}>
+    <Link href={href} className={cn("group block content-visibility-auto", className)}>
       <div className={cn("overflow-hidden rounded-lg", compact ? "flex gap-3" : "flex flex-col")}>
         {/* Thumbnail & Preview */}
         <div
