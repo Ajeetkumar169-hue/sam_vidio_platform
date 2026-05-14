@@ -150,6 +150,26 @@ function ShortsFeedContent() {
       .catch(() => setLoading(false))
   }, [user, initialVideoId])
 
+  // Scroll to the target short after it renders
+  useEffect(() => {
+    if (!initialVideoId || shorts.length === 0) return
+    const targetIndex = shorts.findIndex(s => s._id === initialVideoId)
+    if (targetIndex <= 0) return
+
+    // Wait for DOM elements to render, then scroll
+    const scrollTimer = setTimeout(() => {
+      const elements = document.querySelectorAll(".short-item")
+      const targetEl = elements[targetIndex] as HTMLElement
+      if (targetEl && containerRef.current) {
+        containerRef.current.scrollTo({
+          top: targetEl.offsetTop,
+          behavior: "instant"
+        })
+      }
+    }, 300)
+    return () => clearTimeout(scrollTimer)
+  }, [initialVideoId, shorts])
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
